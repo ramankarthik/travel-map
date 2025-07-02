@@ -67,10 +67,19 @@ export class DestinationsService {
       
       // Transform the data to match our Destination interface
       // Preserve photos data instead of resetting to empty array
-      return (data || []).map(location => ({
-        ...location,
-        photos: location.photos || [] // Use existing photos or empty array if null
-      }))
+      const transformedData = (data || []).map(location => {
+        console.log(`Location ${location.name}: photos count = ${location.photos?.length || 0}`);
+        if (location.photos && location.photos.length > 0) {
+          console.log(`Photos for ${location.name}:`, location.photos.slice(0, 1).map((p: string) => p.substring(0, 50) + '...'));
+        }
+        return {
+          ...location,
+          photos: location.photos || [] // Use existing photos or empty array if null
+        };
+      });
+      
+      console.log('Transformed destinations with photos:', transformedData.map(d => ({ name: d.name, photoCount: d.photos.length })));
+      return transformedData;
     } catch (error) {
       console.error('Error in getDestinations:', error)
       // Return empty array instead of throwing to prevent infinite loading
@@ -108,6 +117,11 @@ export class DestinationsService {
         return mockDestination
       }
 
+      console.log('Creating destination with photos:', destinationData.photos?.length || 0);
+      if (destinationData.photos && destinationData.photos.length > 0) {
+        console.log('Photo data sample:', destinationData.photos[0].substring(0, 50) + '...');
+      }
+
       const { data, error } = await supabase
         .from('locations')
         .insert({
@@ -129,6 +143,7 @@ export class DestinationsService {
         throw error
       }
 
+      console.log('Destination created successfully, returned photos count:', data.photos?.length || 0);
       return {
         ...data,
         photos: destinationData.photos || []
