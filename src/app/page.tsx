@@ -44,21 +44,27 @@ export default function HomePage() {
   const handleSaveDestination = async (destinationData: CreateDestinationData | UpdateDestinationData) => {
     if (!user) return;
 
+    console.log('Saving destination:', destinationData);
+
     try {
       if (isNewDestination) {
         // Create new destination
+        console.log('Creating new destination...');
         const newDestination = await DestinationsService.createDestination(
           user, 
           destinationData as CreateDestinationData
         );
+        console.log('New destination created:', newDestination);
         setDestinations(prev => [newDestination, ...prev]);
       } else if (modalDestination) {
         // Update existing destination
+        console.log('Updating existing destination:', modalDestination.id);
         const updatedDestination = await DestinationsService.updateDestination(
           user,
           modalDestination.id,
           destinationData as UpdateDestinationData
         );
+        console.log('Destination updated:', updatedDestination);
         setDestinations(prev => 
           prev.map(dest => 
             dest.id === modalDestination.id ? updatedDestination : dest
@@ -144,6 +150,12 @@ export default function HomePage() {
   const uniqueContinents = visitedContinents.has('Unknown')
     ? visitedContinents.size - 1
     : visitedContinents.size;
+
+  // Debug logging
+  console.log('Destinations updated:', destinations.length);
+  console.log('Visited countries:', Array.from(visitedCountries));
+  console.log('Visited continents:', Array.from(visitedContinents));
+  console.log('Stats:', { totalCount, visitedCount, wishlistCount, uniqueCountries, uniqueContinents });
 
   if (isLoading) {
     return (
