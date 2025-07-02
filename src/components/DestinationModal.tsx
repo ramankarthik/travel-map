@@ -182,6 +182,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
     if (!files) return;
 
     console.log('Photo upload started, files:', files.length);
+    console.log('Current photos count:', formData.photos.length);
 
     // Check file sizes
     const oversizedFiles = Array.from(files).filter(file => file.size > MAX_FILE_SIZE_BYTES);
@@ -225,6 +226,10 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
         ...prev, 
         photos: [...prev.photos, ...newPhotos] 
       }));
+      
+      // Reset the file input to allow multiple uploads
+      event.target.value = '';
+      
     } catch (error) {
       console.error('Error processing photos:', error);
     } finally {
@@ -448,17 +453,12 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                       id="photo-upload"
                       disabled={isUploadingPhoto}
                     />
-                    <label
-                      htmlFor="photo-upload"
-                      className="flex items-center justify-center w-full h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors"
-                    >
-                      <div className="text-center">
-                        <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
-                        <p className="text-sm text-gray-500">
-                          {isUploadingPhoto ? 'Uploading...' : `Upload photos (max ${MAX_PHOTOS_PER_LOCATION}, ${MAX_FILE_SIZE_MB}MB each)`}
-                        </p>
-                      </div>
-                    </label>
+                    <div className="text-center">
+                      <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
+                      <p className="text-sm text-gray-500">
+                        {isUploadingPhoto ? 'Uploading...' : `Upload photos (max ${MAX_PHOTOS_PER_LOCATION}, ${MAX_FILE_SIZE_MB}MB each)`}
+                      </p>
+                    </div>
                   </label>
                 )}
               </div>
