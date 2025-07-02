@@ -361,11 +361,11 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {formData.photos.map((photo, index) => (
-                  <div key={index} className="relative group">
+                  <div key={index} className="relative group aspect-square overflow-hidden rounded-md bg-gray-100">
                     <img
                       src={photo}
                       alt={`Photo ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-md cursor-pointer hover:opacity-80 transition-opacity"
+                      className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() => openPhotoModal(index)}
                     />
                     <button
@@ -377,7 +377,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                   </div>
                 ))}
                 {formData.photos.length < MAX_PHOTOS_PER_LOCATION && (
-                  <label className="w-full h-24 border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors">
+                  <label className="relative aspect-square w-full h-full border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors bg-gray-50">
                     <input
                       type="file"
                       accept="image/*"
@@ -389,8 +389,9 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                     {isUploadingPhoto ? (
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                     ) : (
-                      <Plus className="w-6 h-6 text-gray-400" />
+                      <Camera className="w-8 h-8 text-gray-300 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
                     )}
+                    <Plus className="w-6 h-6 text-gray-400 absolute bottom-2 right-2 bg-white rounded-full p-1 shadow" />
                   </label>
                 )}
               </div>
@@ -439,23 +440,21 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Full-size Photo Modal */}
+      {/* Full-size Photo Modal (root level, not nested) */}
       {selectedPhotoIndex !== null && (
         <Dialog open={selectedPhotoIndex !== null} onOpenChange={closePhotoModal}>
-          <DialogContent className="max-w-4xl max-h-[90vh] p-0">
-            <div className="relative">
-              <button
-                onClick={closePhotoModal}
-                className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-70"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <img
-                src={formData.photos[selectedPhotoIndex]}
-                alt={`Photo ${selectedPhotoIndex + 1}`}
-                className="w-full h-full object-contain max-h-[80vh]"
-              />
-            </div>
+          <DialogContent className="max-w-4xl max-h-[90vh] p-0 flex items-center justify-center bg-black bg-opacity-80">
+            <button
+              onClick={closePhotoModal}
+              className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-70"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <img
+              src={formData.photos[selectedPhotoIndex]}
+              alt={`Photo ${selectedPhotoIndex + 1}`}
+              className="object-contain max-w-full max-h-[80vh] mx-auto"
+            />
           </DialogContent>
         </Dialog>
       )}
