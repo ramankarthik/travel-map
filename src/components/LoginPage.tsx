@@ -6,31 +6,93 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Map, Globe, Loader2 } from 'lucide-react'
+import { Map, Globe, Loader2, Eye, EyeOff } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const [isSigningUp, setIsSigningUp] = useState(false)
+  const [isLoginMode, setIsLoginMode] = useState(true)
+  const [showPassword, setShowPassword] = useState(false)
   const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setIsLoggingIn(true)
     
-    console.log('LoginPage: Attempting login with:', email, password)
+    if (isLoginMode) {
+      setIsLoggingIn(true)
+      console.log('LoginPage: Attempting login with:', email, password)
+      const success = await login(email, password)
+      console.log('LoginPage: Login result:', success)
+      if (!success) {
+        setError('Invalid email or password')
+      }
+      setIsLoggingIn(false)
+    } else {
+      // Sign up flow
+      if (!name.trim()) {
+        setError('Name is required')
+        return
+      }
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters')
+        return
+      }
+      
+      setIsSigningUp(true)
+      try {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: name.trim()
+            }
+          }
+        })
 
-    const success = await login(email, password)
-    
-    console.log('LoginPage: Login result:', success)
-    
-    if (!success) {
-      setError('Invalid email or password')
+        if (signUpError) {
+          setError(signUpError.message)
+        } else if (data.user) {
+          // Create user profile
+          const { error: profileError } = await supabase
+            .from('users')
+            .insert({
+              id: data.user.id,
+              email: data.user.email || '',
+              name: name.trim()
+            })
+
+          if (profileError) {
+            console.error('Error creating user profile:', profileError)
+            setError('Account created but profile setup failed. Please try logging in.')
+          } else {
+            setError('Account created successfully! Please check your email to verify your account.')
+            // Switch to login mode
+            setIsLoginMode(true)
+            setPassword('')
+          }
+        }
+      } catch (error) {
+        console.error('Sign up error:', error)
+        setError('An error occurred during sign up. Please try again.')
+      } finally {
+        setIsSigningUp(false)
+      }
     }
-    
-    setIsLoggingIn(false)
+  }
+
+  const toggleMode = () => {
+    setIsLoginMode(!isLoginMode)
+    setError('')
+    setEmail('')
+    setPassword('')
+    setName('')
   }
 
   return (
@@ -48,16 +110,36 @@ export const LoginPage = () => {
           <p className="text-gray-600">Plan and remember your family adventures</p>
         </div>
 
-        {/* Login Card */}
+        {/* Login/Signup Card */}
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Welcome Back</CardTitle>
+            <CardTitle className="text-2xl">
+              {isLoginMode ? 'Welcome Back' : 'Create Account'}
+            </CardTitle>
             <CardDescription>
-              Sign in to access your travel memories and plans
+              {isLoginMode 
+                ? 'Sign in to access your travel memories and plans'
+                : 'Join us to start planning your next adventure'
+              }
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLoginMode && (
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Enter your full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required={!isLoginMode}
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -67,53 +149,74 @@ export const LoginPage = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  disabled={isLoggingIn}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isLoggingIn}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               {error && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-600">{error}</p>
+                  <p className="text-red-600 text-sm">{error}</p>
                 </div>
               )}
 
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoggingIn}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoggingIn || isSigningUp}
               >
-                {isLoggingIn ? (
+                {isLoggingIn || isSigningUp ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Signing in...
+                    {isLoginMode ? 'Signing In...' : 'Creating Account...'}
                   </>
                 ) : (
-                  'Sign In'
+                  isLoginMode ? 'Sign In' : 'Create Account'
                 )}
               </Button>
             </form>
 
-            {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h3 className="text-sm font-medium text-blue-900 mb-2">Demo Accounts</h3>
-              <div className="space-y-1 text-xs text-blue-700">
-                <p><strong>Demo User:</strong> demo@example.com / demo123</p>
-                <p><strong>Family Account:</strong> family@example.com / family123</p>
-              </div>
+            <div className="mt-6 text-center">
+              <button
+                onClick={toggleMode}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                {isLoginMode 
+                  ? "Don't have an account? Sign up" 
+                  : "Already have an account? Sign in"
+                }
+              </button>
             </div>
+
+            {/* Demo Accounts */}
+            {isLoginMode && (
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <h3 className="text-sm font-medium text-blue-900 mb-2">Demo Accounts</h3>
+                <div className="space-y-1 text-xs text-blue-700">
+                  <p><strong>Demo User:</strong> demo@example.com / demo123</p>
+                  <p><strong>Family Account:</strong> family@example.com / family123</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
