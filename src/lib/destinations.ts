@@ -41,6 +41,16 @@ export interface UpdateDestinationData {
 export class DestinationsService {
   static async getDestinations(user: User): Promise<Destination[]> {
     try {
+      // Special handling for demo user
+      if (user.id === '00000000-0000-0000-0000-000000000001') {
+        // For demo user, load from localStorage
+        if (typeof window !== 'undefined') {
+          const demoDestinations = JSON.parse(localStorage.getItem('demo-destinations') || '[]')
+          return demoDestinations
+        }
+        return []
+      }
+
       const { data, error } = await supabase
         .from('locations')
         .select('*')
@@ -65,6 +75,34 @@ export class DestinationsService {
 
   static async createDestination(user: User, destinationData: CreateDestinationData): Promise<Destination> {
     try {
+      // Special handling for demo user
+      if (user.id === '00000000-0000-0000-0000-000000000001') {
+        // For demo user, create a mock destination with generated ID
+        const mockDestination: Destination = {
+          id: `demo-${Date.now()}`,
+          user_id: user.id,
+          name: destinationData.name,
+          country: destinationData.country,
+          lat: destinationData.lat,
+          lng: destinationData.lng,
+          status: destinationData.status,
+          date: destinationData.date || null,
+          notes: destinationData.notes || '',
+          photos: destinationData.photos || [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+        
+        // Store in localStorage for demo purposes
+        if (typeof window !== 'undefined') {
+          const existingDestinations = JSON.parse(localStorage.getItem('demo-destinations') || '[]')
+          existingDestinations.push(mockDestination)
+          localStorage.setItem('demo-destinations', JSON.stringify(existingDestinations))
+        }
+        
+        return mockDestination
+      }
+
       const { data, error } = await supabase
         .from('locations')
         .insert({

@@ -16,16 +16,58 @@ export interface AuthContextType {
 
 // Mock user for demo purposes (you can remove this later)
 const DEMO_USER: User = {
-  id: 'demo-user-id',
+  id: '00000000-0000-0000-0000-000000000001', // Use a proper UUID
   email: 'demo@example.com',
   name: 'Demo User'
+}
+
+// Function to ensure demo user exists in database
+const ensureDemoUserExists = async (): Promise<boolean> => {
+  try {
+    // First, try to get existing demo user
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', DEMO_USER.id)
+      .single()
+
+    if (existingUser) {
+      return true // Demo user already exists
+    }
+
+    // Create demo user if it doesn't exist
+    const { error: insertError } = await supabase
+      .from('users')
+      .insert({
+        id: DEMO_USER.id,
+        email: DEMO_USER.email,
+        name: DEMO_USER.name
+      })
+
+    if (insertError) {
+      console.error('Error creating demo user:', insertError)
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error('Error ensuring demo user exists:', error)
+    return false
+  }
 }
 
 export const loginUser = async (email: string, password: string): Promise<User | null> => {
   try {
     // For demo purposes, allow login with demo credentials
     if (email === 'demo@example.com' && password === 'demo123') {
-      return DEMO_USER
+      // Ensure demo user exists in database before allowing login
+      const demoUserExists = await ensureDemoUserExists()
+      if (demoUserExists) {
+        return DEMO_USER
+      } else {
+        console.error('Failed to create demo user in database')
+        return null
+      }
     }
 
     // Real Supabase authentication
