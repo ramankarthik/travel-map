@@ -6,15 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Camera, FileText, Plus, X, MapPin, Search, Calendar, Trash2 } from 'lucide-react';
+import { Camera, Plus, X, MapPin, Search, Calendar, Trash2 } from 'lucide-react';
+import type { Destination } from '@/lib/destinations';
 
 interface DestinationModalProps {
-  destination: any;
+  destination: Destination | null;
   isOpen: boolean;
   isNewDestination: boolean;
   onClose: () => void;
-  onSave: (destination: any) => void;
+  onSave: (destination: Destination) => void;
   onDelete?: () => void;
 }
 
@@ -34,16 +34,19 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
   onSave,
   onDelete
 }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Destination>({
+    id: '',
+    user_id: '',
     name: '',
     country: '',
     date: '',
     status: 'wishlist',
-    color: 'blue',
-    photos: [] as string[],
     notes: '',
+    photos: [],
     lat: 0,
-    lng: 0
+    lng: 0,
+    created_at: '',
+    updated_at: '',
   });
 
   const [locationQuery, setLocationQuery] = useState('');
@@ -68,15 +71,18 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
     if (isOpen) {
       if (isNewDestination) {
         setFormData({
+          id: '',
+          user_id: '',
           name: '',
           country: '',
           date: new Date().toISOString().slice(0, 7), // YYYY-MM format
           status: 'wishlist',
-          color: 'blue',
-          photos: [],
           notes: '',
+          photos: [],
           lat: 0,
-          lng: 0
+          lng: 0,
+          created_at: '',
+          updated_at: '',
         });
         setLocationQuery('');
       } else if (destination) {
@@ -92,7 +98,11 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
         setFormData({
           ...destination,
           date: formattedDate,
-          notes: typeof destination.notes === 'string' ? destination.notes : destination.notes?.find((n: any) => n.type === 'text')?.content || ''
+          notes: typeof destination.notes === 'string' 
+            ? destination.notes 
+            : (Array.isArray(destination.notes) && (destination.notes as any[]).length > 0 && typeof (destination.notes as any[])[0] === 'object' && 'type' in (destination.notes as any[])[0] && (destination.notes as any[]).find((n: any) => n.type === 'text'))
+              ? (destination.notes as any[]).find((n: any) => n.type === 'text').content
+              : ''
         });
         setLocationQuery(destination.name || '');
       }
@@ -155,7 +165,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
     setShowSuggestions(false);
   };
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: keyof Destination, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -173,8 +183,6 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
       photos: prev.photos.filter((_, i) => i !== index)
     }));
   };
-
-
 
   const handleSubmit = () => {
     // Validate required fields
@@ -295,13 +303,11 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
               <Input
                 id="date"
                 type="month"
-                value={formData.date}
+                value={formData.date || ''}
                 onChange={(e) => handleInputChange('date', e.target.value)}
               />
             </div>
           )}
-
-
 
           {/* Photos */}
           <div className="space-y-2">

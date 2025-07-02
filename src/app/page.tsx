@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoginPage } from '@/components/LoginPage';
 import { TravelMap } from '@/components/TravelMap';
-import { MapPin, Calendar, Plane, Camera, FileText, Plus, X, ExternalLink, LogOut } from 'lucide-react';
+import { MapPin, Plus, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DestinationModal } from '@/components/DestinationModal';
 import { Destination, DestinationsService, CreateDestinationData, UpdateDestinationData } from '@/lib/destinations';
@@ -18,14 +18,7 @@ export default function HomePage() {
   const [isNewDestination, setIsNewDestination] = useState(false);
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(false);
 
-  // Load destinations from Supabase
-  useEffect(() => {
-    if (user) {
-      loadDestinations();
-    }
-  }, [user]);
-
-  const loadDestinations = async () => {
+  const loadDestinations = useCallback(async () => {
     if (!user) return;
     
     setIsLoadingDestinations(true);
@@ -39,7 +32,14 @@ export default function HomePage() {
     } finally {
       setIsLoadingDestinations(false);
     }
-  };
+  }, [user]);
+
+  // Load destinations from Supabase
+  useEffect(() => {
+    if (user) {
+      loadDestinations();
+    }
+  }, [user, loadDestinations]);
 
   const handleSaveDestination = async (destinationData: CreateDestinationData | UpdateDestinationData) => {
     if (!user) return;
