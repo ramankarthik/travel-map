@@ -206,12 +206,21 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
         console.log('Processing file:', file.name, file.size);
         // Compress the image
         const optimizedFile = await optimizeImage(file, 800, 0.6);
-        const photoUrl = URL.createObjectURL(optimizedFile);
-        console.log('Created photo URL:', photoUrl);
-        newPhotos.push(photoUrl);
+        
+        // Convert to base64 for storage
+        const base64String = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            resolve(reader.result as string);
+          };
+          reader.readAsDataURL(optimizedFile);
+        });
+        
+        console.log('Created base64 photo, length:', base64String.length);
+        newPhotos.push(base64String);
       }
 
-      console.log('Setting new photos:', newPhotos);
+      console.log('Setting new photos:', newPhotos.length);
       setFormData(prev => ({ 
         ...prev, 
         photos: [...prev.photos, ...newPhotos] 

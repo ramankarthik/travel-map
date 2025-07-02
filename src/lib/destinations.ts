@@ -51,6 +51,7 @@ export class DestinationsService {
         return []
       }
 
+      console.log('Fetching destinations for user:', user.id)
       const { data, error } = await supabase
         .from('locations')
         .select('*')
@@ -62,14 +63,18 @@ export class DestinationsService {
         throw error
       }
 
+      console.log('Fetched destinations from database:', data?.length || 0)
+      
       // Transform the data to match our Destination interface
+      // Preserve photos data instead of resetting to empty array
       return (data || []).map(location => ({
         ...location,
-        photos: [] // For now, we'll handle photos separately
+        photos: location.photos || [] // Use existing photos or empty array if null
       }))
     } catch (error) {
       console.error('Error in getDestinations:', error)
-      throw error
+      // Return empty array instead of throwing to prevent infinite loading
+      return []
     }
   }
 
@@ -205,7 +210,7 @@ export class DestinationsService {
 
       return {
         ...data,
-        photos: [] // For now, we'll handle photos separately
+        photos: data.photos || [] // Use existing photos or empty array if null
       }
     } catch (error) {
       console.error('Error in getDestinationById:', error)

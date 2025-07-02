@@ -19,15 +19,20 @@ export default function HomePage() {
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(false);
 
   const loadDestinations = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found, skipping destination load');
+      return;
+    }
     
+    console.log('Loading destinations for user:', user.id);
     setIsLoadingDestinations(true);
     try {
       const data = await DestinationsService.getDestinations(user);
+      console.log('Successfully loaded destinations:', data.length);
       setDestinations(data);
     } catch (error) {
       console.error('Error loading destinations:', error);
-      // For demo purposes, you might want to show some sample data
+      // Set empty array instead of keeping old data to prevent confusion
       setDestinations([]);
     } finally {
       setIsLoadingDestinations(false);
