@@ -372,7 +372,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                       onClick={() => removePhoto(index)}
                       className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <X className="w-3 h-3" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
@@ -443,7 +443,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
       {/* Full-size Photo Modal (root level, not nested) */}
       {selectedPhotoIndex !== null && (
         <Dialog open={selectedPhotoIndex !== null} onOpenChange={closePhotoModal}>
-          <DialogContent className="max-w-4xl max-h-[90vh] p-0 flex items-center justify-center bg-black bg-opacity-80">
+          <DialogContent className="max-w-[98vw] max-h-[98vh] p-0 flex items-center justify-center bg-black bg-opacity-80">
             <button
               onClick={closePhotoModal}
               className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-70"
@@ -453,7 +453,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
             <img
               src={formData.photos[selectedPhotoIndex]}
               alt={`Photo ${selectedPhotoIndex + 1}`}
-              className="object-contain max-w-full max-h-[80vh] mx-auto"
+              className="object-contain max-w-full max-h-[95vh] mx-auto"
             />
           </DialogContent>
         </Dialog>

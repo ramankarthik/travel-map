@@ -56,12 +56,13 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         // Initialize the map
         if (!mapRef.current) return;
         const map = L.map(mapRef.current, {
-          minZoom: 2,
+          minZoom: 1,
           maxZoom: 18,
           worldCopyJump: false,
           maxBounds: [[-90, -180], [90, 180]],
           maxBoundsViscosity: 1.0
-        }).setView([20, 0], 2); // World view by default
+        }).setView([20, 0], 1); // Max zoomed out
+        map.fitWorld();
 
         // Add OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

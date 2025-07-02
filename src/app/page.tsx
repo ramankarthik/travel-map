@@ -104,43 +104,46 @@ export default function HomePage() {
   const wishlistCount = destinations.filter(dest => dest.status === 'wishlist').length;
 
   // Calculate unique countries and continents
-  const uniqueCountries = new Set(
-    destinations
-      .filter(dest => dest.status === 'visited')
-      .map(dest => dest.country)
-  ).size;
+  const countryToContinent: { [key: string]: string } = {
+    'USA': 'North America',
+    'United States': 'North America',
+    'Canada': 'North America',
+    'Mexico': 'North America',
+    'Brazil': 'South America',
+    'Argentina': 'South America',
+    'UK': 'Europe',
+    'United Kingdom': 'Europe',
+    'France': 'Europe',
+    'Germany': 'Europe',
+    'Italy': 'Europe',
+    'Spain': 'Europe',
+    'Japan': 'Asia',
+    'China': 'Asia',
+    'India': 'Asia',
+    'Thailand': 'Asia',
+    'Australia': 'Oceania',
+    'New Zealand': 'Oceania',
+    'South Africa': 'Africa',
+    'Egypt': 'Africa',
+    'Morocco': 'Africa',
+    'Kenya': 'Africa',
+    // Add more as needed
+  };
 
-  const uniqueContinents = new Set(
+  const visitedCountries = new Set(
     destinations
-      .filter(dest => dest.status === 'visited')
-      .map(dest => {
-        const country = dest.country;
-        // Simple continent mapping - you might want to use a proper geocoding service
-        const continentMap: { [key: string]: string } = {
-          'USA': 'North America',
-          'Canada': 'North America',
-          'Mexico': 'North America',
-          'Brazil': 'South America',
-          'Argentina': 'South America',
-          'UK': 'Europe',
-          'France': 'Europe',
-          'Germany': 'Europe',
-          'Italy': 'Europe',
-          'Spain': 'Europe',
-          'Japan': 'Asia',
-          'China': 'Asia',
-          'India': 'Asia',
-          'Thailand': 'Asia',
-          'Australia': 'Oceania',
-          'New Zealand': 'Oceania',
-          'South Africa': 'Africa',
-          'Egypt': 'Africa',
-          'Morocco': 'Africa',
-          'Kenya': 'Africa'
-        };
-        return continentMap[country] || 'Unknown';
-      })
-  ).size;
+      .filter(dest => dest.status === 'visited' && dest.country)
+      .map(dest => dest.country.trim())
+  );
+
+  const visitedContinents = new Set(
+    Array.from(visitedCountries).map(country => countryToContinent[country] || 'Unknown')
+  );
+
+  const uniqueCountries = visitedCountries.size;
+  const uniqueContinents = visitedContinents.has('Unknown')
+    ? visitedContinents.size - 1
+    : visitedContinents.size;
 
   if (isLoading) {
     return (
