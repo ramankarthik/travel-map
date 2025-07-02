@@ -19,8 +19,12 @@ export const LoginPage = () => {
     e.preventDefault()
     setError('')
     setIsLoggingIn(true)
+    
+    console.log('LoginPage: Attempting login with:', email, password)
 
     const success = await login(email, password)
+    
+    console.log('LoginPage: Login result:', success)
     
     if (!success) {
       setError('Invalid email or password')
