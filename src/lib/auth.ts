@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { User as SupabaseUser } from '@supabase/supabase-js'
+
 
 export interface User {
   id: string
@@ -52,7 +52,7 @@ export const loginUser = async (email: string, password: string): Promise<User |
   }
 }
 
-export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | null> => {
+export const createOrGetUserProfile = async (supabaseUser: Record<string, unknown>): Promise<User | null> => {
   try {
     // First, try to get existing user profile
     const { data: existingUser, error: fetchError } = await supabase

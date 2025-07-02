@@ -100,9 +100,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
           date: formattedDate,
           notes: typeof destination.notes === 'string' 
             ? destination.notes 
-            : (Array.isArray(destination.notes) && (destination.notes as any[]).length > 0 && typeof (destination.notes as any[])[0] === 'object' && 'type' in (destination.notes as any[])[0] && (destination.notes as any[]).find((n: any) => n.type === 'text'))
-              ? (destination.notes as any[]).find((n: any) => n.type === 'text').content
-              : ''
+            : ''
         });
         setLocationQuery(destination.name || '');
       }
@@ -123,12 +121,12 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
       );
       const data = await response.json();
       
-      const suggestions: LocationSuggestion[] = data.map((item: any) => ({
-        name: item.name || item.display_name.split(',')[0],
-        country: item.address?.country || item.display_name.split(',').pop()?.trim() || '',
-        lat: parseFloat(item.lat),
-        lng: parseFloat(item.lon),
-        displayName: item.display_name
+      const suggestions: LocationSuggestion[] = data.map((item: Record<string, unknown>) => ({
+        name: (item.name as string) || ((item.display_name as string)?.split(',')[0] || ''),
+        country: ((item.address as Record<string, unknown>)?.country as string) || ((item.display_name as string)?.split(',').pop()?.trim() || ''),
+        lat: parseFloat(item.lat as string),
+        lng: parseFloat(item.lon as string),
+        displayName: item.display_name as string
       }));
       
       setLocationSuggestions(suggestions);
@@ -165,7 +163,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
     setShowSuggestions(false);
   };
 
-  const handleInputChange = (field: keyof Destination, value: any) => {
+  const handleInputChange = (field: keyof Destination, value: string | number | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

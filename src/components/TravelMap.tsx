@@ -28,8 +28,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   onMarkerClick
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const mapInstanceRef = useRef<unknown>(null);
+  const markersRef = useRef<unknown[]>([]);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         // CSS is loaded via CDN in the head
 
         // Fix for default markers in Leaflet
-        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        delete (L.Icon.Default.prototype as Record<string, unknown>)._getIconUrl;
         L.Icon.Default.mergeOptions({
           iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
           iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
