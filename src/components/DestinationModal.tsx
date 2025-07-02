@@ -178,6 +178,8 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
     const files = event.target.files;
     if (!files) return;
 
+    console.log('Photo upload started, files:', files.length);
+
     // Check photo limit
     if (formData.photos.length + files.length > MAX_PHOTOS_PER_LOCATION) {
       setShowPhotoLimitError(true);
@@ -190,12 +192,15 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
       const newPhotos: string[] = [];
       
       for (const file of Array.from(files)) {
+        console.log('Processing file:', file.name, file.size);
         // Compress the image
         const optimizedFile = await optimizeImage(file, 1200, 0.8);
         const photoUrl = URL.createObjectURL(optimizedFile);
+        console.log('Created photo URL:', photoUrl);
         newPhotos.push(photoUrl);
       }
 
+      console.log('Setting new photos:', newPhotos);
       setFormData(prev => ({ 
         ...prev, 
         photos: [...prev.photos, ...newPhotos] 
@@ -215,11 +220,27 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
   };
 
   const openPhotoModal = (index: number) => {
+    console.log('Opening photo modal for index:', index);
     setSelectedPhotoIndex(index);
   };
 
   const closePhotoModal = () => {
+    console.log('Closing photo modal');
     setSelectedPhotoIndex(null);
+  };
+
+  const handlePhotoClick = (index: number, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    console.log('Photo clicked:', index);
+    openPhotoModal(index);
+  };
+
+  const handleDeleteClick = (index: number, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    console.log('Delete photo clicked:', index);
+    removePhoto(index);
   };
 
   const handleSubmit = () => {
@@ -359,6 +380,11 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                   </div>
                 )}
               </div>
+              {formData.photos.length > 0 && (
+                <div className="text-xs text-gray-500 mb-2">
+                  Debug: {formData.photos.length} photos loaded
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-2">
                 {formData.photos.map((photo, index) => (
                   <div key={index} className="relative group aspect-square overflow-hidden rounded-md bg-gray-100">
@@ -366,10 +392,10 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                       src={photo}
                       alt={`Photo ${index + 1}`}
                       className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => openPhotoModal(index)}
+                      onClick={(event) => handlePhotoClick(index, event)}
                     />
                     <button
-                      onClick={() => removePhoto(index)}
+                      onClick={(event) => handleDeleteClick(index, event)}
                       className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="w-4 h-4" />
