@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 interface Destination {
   id: string;
+  user_id: string;
   name: string;
   country: string;
   lat: number;
@@ -28,8 +29,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   onMarkerClick
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<unknown>(null);
-  const markersRef = useRef<unknown[]>([]);
+  const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         // CSS is loaded via CDN in the head
 
         // Fix for default markers in Leaflet
-        delete (L.Icon.Default.prototype as Record<string, unknown>)._getIconUrl;
+        delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
         L.Icon.Default.mergeOptions({
           iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
           iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',

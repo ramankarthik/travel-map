@@ -46,6 +46,8 @@ export const LoginPage = () => {
       
       setIsSigningUp(true)
       try {
+        console.log('Starting signup process for:', email)
+        
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -57,21 +59,27 @@ export const LoginPage = () => {
         })
 
         if (signUpError) {
+          console.error('Signup error:', signUpError)
           setError(signUpError.message)
         } else if (data.user) {
-          // Create user profile
-          const { error: profileError } = await supabase
+          console.log('User created successfully:', data.user.id)
+          
+          // The database trigger should automatically create the user profile
+          // Wait a moment for the trigger to execute
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          
+          // Verify the profile was created
+          const { data: profileData, error: profileError } = await supabase
             .from('users')
-            .insert({
-              id: data.user.id,
-              email: data.user.email || '',
-              name: name.trim()
-            })
+            .select('*')
+            .eq('id', data.user.id)
+            .single()
 
-          if (profileError) {
-            console.error('Error creating user profile:', profileError)
+          if (profileError || !profileData) {
+            console.error('Profile verification failed:', profileError)
             setError('Account created but profile setup failed. Please try logging in.')
           } else {
+            console.log('Profile verified successfully')
             setError('Account created successfully! Please check your email to verify your account.')
             // Switch to login mode
             setIsLoginMode(true)

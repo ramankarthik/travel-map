@@ -59,14 +59,18 @@ BEGIN
       BEFORE UPDATE ON public.users
       FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
   END IF;
-END $$;
-
-DO $$
-BEGIN
+  
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'handle_locations_updated_at') THEN
     CREATE TRIGGER handle_locations_updated_at
       BEFORE UPDATE ON public.locations
       FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+  END IF;
+  
+  -- Add trigger for automatic user profile creation
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'on_auth_user_created') THEN
+    CREATE TRIGGER on_auth_user_created
+      AFTER INSERT ON auth.users
+      FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
   END IF;
 END $$;
 

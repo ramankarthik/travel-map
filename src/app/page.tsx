@@ -42,9 +42,13 @@ export default function HomePage() {
   }, [user, loadDestinations]);
 
   const handleSaveDestination = async (destinationData: CreateDestinationData | UpdateDestinationData) => {
-    if (!user) return;
+    if (!user) {
+      console.error('No user found when trying to save destination');
+      return;
+    }
 
     console.log('Saving destination:', destinationData);
+    console.log('Current user:', user);
 
     try {
       if (isNewDestination) {
@@ -77,7 +81,8 @@ export default function HomePage() {
       setIsNewDestination(false);
     } catch (error) {
       console.error('Error saving destination:', error);
-      // You might want to show an error message to the user
+      // Show error to user
+      alert(`Failed to save destination: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

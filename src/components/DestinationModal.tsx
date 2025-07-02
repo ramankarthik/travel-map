@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Camera, Plus, X, MapPin, Search, Calendar, Trash2, AlertCircle } from 'lucide-react';
-import type { Destination } from '@/lib/destinations';
+import { Camera, Plus, X, MapPin, Search, Calendar, Trash2, AlertCircle, Upload } from 'lucide-react';
+import type { Destination, CreateDestinationData, UpdateDestinationData } from '@/lib/destinations';
 import { optimizeImage } from '@/lib/utils';
 
 interface DestinationModalProps {
@@ -15,7 +15,7 @@ interface DestinationModalProps {
   isOpen: boolean;
   isNewDestination: boolean;
   onClose: () => void;
-  onSave: (destination: Destination) => void;
+  onSave: (destination: CreateDestinationData | UpdateDestinationData) => void;
   onDelete?: () => void;
 }
 
@@ -28,7 +28,9 @@ interface LocationSuggestion {
 }
 
 // Photo limit constant
-const MAX_PHOTOS_PER_LOCATION = 5;
+const MAX_PHOTOS_PER_LOCATION = 3; // Reduced from 5 to save storage
+const MAX_FILE_SIZE_MB = 5; // 5MB max before compression
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export const DestinationModal: React.FC<DestinationModalProps> = ({
   destination,
@@ -60,6 +62,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [showPhotoLimitError, setShowPhotoLimitError] = useState(false);
+  const [error, setError] = useState('');
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -180,6 +183,14 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
 
     console.log('Photo upload started, files:', files.length);
 
+    // Check file sizes
+    const oversizedFiles = Array.from(files).filter(file => file.size > MAX_FILE_SIZE_BYTES);
+    if (oversizedFiles.length > 0) {
+      setError(`Files must be smaller than ${MAX_FILE_SIZE_MB}MB. Please resize your images.`);
+      setTimeout(() => setError(''), 5000);
+      return;
+    }
+
     // Check photo limit
     if (formData.photos.length + files.length > MAX_PHOTOS_PER_LOCATION) {
       setShowPhotoLimitError(true);
@@ -194,7 +205,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
       for (const file of Array.from(files)) {
         console.log('Processing file:', file.name, file.size);
         // Compress the image
-        const optimizedFile = await optimizeImage(file, 1200, 0.8);
+        const optimizedFile = await optimizeImage(file, 800, 0.6);
         const photoUrl = URL.createObjectURL(optimizedFile);
         console.log('Created photo URL:', photoUrl);
         newPhotos.push(photoUrl);
@@ -250,8 +261,22 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
       return;
     }
 
+    // Prepare the data to save (exclude id and user_id for new destinations)
+    const saveData = {
+      name: formData.name,
+      country: formData.country,
+      lat: formData.lat,
+      lng: formData.lng,
+      status: formData.status,
+      date: formData.date,
+      notes: formData.notes,
+      photos: formData.photos
+    };
+
+    console.log('Submitting destination data:', saveData);
+
     // Call the save callback
-    onSave(formData);
+    onSave(saveData);
     onClose();
   };
 
@@ -380,9 +405,10 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                   </div>
                 )}
               </div>
-              {formData.photos.length > 0 && (
-                <div className="text-xs text-gray-500 mb-2">
-                  Debug: {formData.photos.length} photos loaded
+              {error && (
+                <div className="flex items-center gap-1 text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{error}</span>
                 </div>
               )}
               <div className="grid grid-cols-3 gap-2">
@@ -410,14 +436,20 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                       multiple
                       onChange={handlePhotoUpload}
                       className="hidden"
+                      id="photo-upload"
                       disabled={isUploadingPhoto}
                     />
-                    {isUploadingPhoto ? (
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                    ) : (
-                      <Camera className="w-8 h-8 text-gray-300 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-                    )}
-                    <Plus className="w-6 h-6 text-gray-400 absolute bottom-2 right-2 bg-white rounded-full p-1 shadow" />
+                    <label
+                      htmlFor="photo-upload"
+                      className="flex items-center justify-center w-full h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors"
+                    >
+                      <div className="text-center">
+                        <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
+                        <p className="text-sm text-gray-500">
+                          {isUploadingPhoto ? 'Uploading...' : `Upload photos (max ${MAX_PHOTOS_PER_LOCATION}, ${MAX_FILE_SIZE_MB}MB each)`}
+                        </p>
+                      </div>
+                    </label>
                   </label>
                 )}
               </div>
