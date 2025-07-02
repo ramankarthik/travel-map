@@ -79,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user) {
         setUser(user)
         // Only store demo user in localStorage
-        if (user.id === 'demo-user-id') {
+        if (user.id === '00000000-0000-0000-0000-000000000001') {
           storeUser(user)
         }
         console.log('AuthContext: User set successfully')

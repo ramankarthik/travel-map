@@ -60,14 +60,9 @@ export const loginUser = async (email: string, password: string): Promise<User |
   try {
     // For demo purposes, allow login with demo credentials
     if (email === 'demo@example.com' && password === 'demo123') {
-      // Ensure demo user exists in database before allowing login
-      const demoUserExists = await ensureDemoUserExists()
-      if (demoUserExists) {
-        return DEMO_USER
-      } else {
-        console.error('Failed to create demo user in database')
-        return null
-      }
+      // For demo user, just return the demo user without database interaction
+      console.log('Demo user login successful')
+      return DEMO_USER
     }
 
     // Real Supabase authentication
