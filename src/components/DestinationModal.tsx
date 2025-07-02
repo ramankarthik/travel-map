@@ -308,7 +308,13 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        // Only close if explicitly set to false (user clicked outside or pressed escape)
+        // Don't close if user is interacting with form elements
+        if (!open) {
+          onClose();
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
@@ -443,7 +449,13 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                   </div>
                 ))}
                 {formData.photos.length < MAX_PHOTOS_PER_LOCATION && (
-                  <label className="relative aspect-square w-full h-full border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors bg-gray-50">
+                  <label 
+                    className="relative aspect-square w-full h-full border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors bg-gray-50"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
                     <input
                       type="file"
                       accept="image/*"
@@ -452,6 +464,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                       className="hidden"
                       id="photo-upload"
                       disabled={isUploadingPhoto}
+                      onClick={(e) => e.stopPropagation()}
                     />
                     <div className="text-center">
                       <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
