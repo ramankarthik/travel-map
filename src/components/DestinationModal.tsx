@@ -208,7 +208,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
         // Compress the image
         const optimizedFile = await optimizeImage(file, 800, 0.6);
         
-        // Convert to base64 for storage (v2 - ensure this is deployed)
+        // Convert to base64 for storage (v3 - ensure this is deployed)
         const base64String = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = () => {
@@ -229,6 +229,8 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
       
       // Reset the file input to allow multiple uploads
       event.target.value = '';
+      
+      console.log('Photo upload completed successfully');
       
     } catch (error) {
       console.error('Error processing photos:', error);
@@ -309,10 +311,14 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => {
+        console.log('Dialog onOpenChange called with:', open, 'isUploadingPhoto:', isUploadingPhoto);
         // Only close if explicitly set to false (user clicked outside or pressed escape)
-        // Don't close if user is interacting with form elements
-        if (!open) {
+        // Don't close if user is interacting with form elements or uploading photos
+        if (!open && !isUploadingPhoto) {
+          console.log('Closing dialog');
           onClose();
+        } else if (!open && isUploadingPhoto) {
+          console.log('Preventing dialog close during photo upload');
         }
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
