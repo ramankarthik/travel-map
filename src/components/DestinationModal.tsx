@@ -40,6 +40,8 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
   onSave,
   onDelete
 }) => {
+  console.log('🚀 DestinationModal rendered, isOpen:', isOpen, 'isNewDestination:', isNewDestination);
+
   const [formData, setFormData] = useState<Destination>({
     id: '',
     user_id: '',
@@ -460,6 +462,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                   <label 
                     className="relative aspect-square w-full h-full border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors bg-gray-50"
                     onClick={(e) => {
+                      console.log('🚀 Label clicked!');
                       e.preventDefault();
                       e.stopPropagation();
                     }}
@@ -472,7 +475,10 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                       className="hidden"
                       id="photo-upload"
                       disabled={isUploadingPhoto}
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        console.log('🚀 File input clicked!');
+                        e.stopPropagation();
+                      }}
                     />
                     <div className="text-center">
                       <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
