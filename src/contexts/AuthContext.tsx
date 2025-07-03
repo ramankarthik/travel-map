@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { User, AuthContextType, loginUser, logoutUser, getCurrentUser, createOrGetUserProfile, getStoredUser, storeUser, clearStoredUser } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 
@@ -71,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe()
   }, [])
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     console.log('AuthContext: Attempting login with:', email)
     try {
       const user = await loginUser(email, password)
@@ -90,9 +90,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Login error:', error)
       return false
     }
-  }
+  }, [])
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     console.log('AuthContext: Logging out')
     try {
       await logoutUser()
@@ -101,14 +101,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setUser(null)
     clearStoredUser()
-  }
+  }, [])
 
-  const value: AuthContextType = {
+  const value = useMemo<AuthContextType>(() => ({
     user,
     login,
     logout,
     isLoading,
-  }
+  }), [user, login, logout, isLoading])
 
   console.log('AuthContext: Current state:', { user, isLoading })
 
