@@ -181,6 +181,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
     const files = event.target.files;
     if (!files) return;
 
+    console.log('🚀 NEW PHOTO UPLOAD CODE V4 - DEPLOYMENT TEST 🚀');
     console.log('Photo upload started, files:', files.length);
     console.log('Current photos count:', formData.photos.length);
 
