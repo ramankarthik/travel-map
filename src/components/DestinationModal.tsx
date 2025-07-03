@@ -208,7 +208,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
         // Compress the image
         const optimizedFile = await optimizeImage(file, 800, 0.6);
         
-        // Convert to base64 for storage
+        // Convert to base64 for storage (v2 - ensure this is deployed)
         const base64String = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = () => {
