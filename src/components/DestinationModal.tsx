@@ -315,7 +315,22 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
   const handleFileInputClick = (event: React.MouseEvent) => {
     // Prevent the click from bubbling up to the dialog
     event.stopPropagation();
-    console.log('File input clicked - preventing dialog close');
+    console.log('🚀 File input clicked - preventing dialog close');
+  };
+
+  const handleUploadButtonClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    console.log('🚀 Upload button clicked - triggering file input');
+    
+    // Find and click the file input
+    const fileInput = document.getElementById('photo-upload') as HTMLInputElement;
+    if (fileInput) {
+      console.log('🚀 Found file input, clicking it');
+      fileInput.click();
+    } else {
+      console.log('🚀 ERROR: Could not find file input');
+    }
   };
 
   return (
@@ -471,26 +486,29 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                   </div>
                 ))}
                 {formData.photos.length < MAX_PHOTOS_PER_LOCATION && (
-                  <div 
-                    className="relative aspect-square w-full h-full border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors bg-gray-50"
-                    onClick={handleFileInputClick}
-                  >
+                  <div className="relative aspect-square w-full h-full border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors bg-gray-50">
+                    {/* Hidden file input */}
                     <input
                       type="file"
                       accept="image/*"
                       multiple
                       onChange={handlePhotoUpload}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      className="hidden"
                       id="photo-upload"
                       disabled={isUploadingPhoto}
-                      onClick={handleFileInputClick}
                     />
-                    <div className="text-center pointer-events-none">
+                    {/* Visible upload button */}
+                    <button
+                      type="button"
+                      onClick={handleUploadButtonClick}
+                      disabled={isUploadingPhoto}
+                      className="w-full h-full flex flex-col items-center justify-center text-center"
+                    >
                       <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
                       <p className="text-sm text-gray-500">
                         {isUploadingPhoto ? 'Uploading...' : `Upload photos (max ${MAX_PHOTOS_PER_LOCATION}, ${MAX_FILE_SIZE_MB}MB each)`}
                       </p>
-                    </div>
+                    </button>
                   </div>
                 )}
               </div>
