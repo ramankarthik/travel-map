@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -183,7 +183,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
     const files = event.target.files;
     if (!files) return;
 
-    console.log('🚀 NEW PHOTO UPLOAD CODE V4 - DEPLOYMENT TEST 🚀');
+    console.log('🚀 NEW PHOTO UPLOAD CODE V5 - FIXED DIALOG ISSUES 🚀');
     console.log('🚀 TIMESTAMP: ' + new Date().toISOString() + ' 🚀');
     console.log('Photo upload started, files:', files.length);
     console.log('Current photos count:', formData.photos.length);
@@ -312,6 +312,12 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
     }
   };
 
+  const handleFileInputClick = (event: React.MouseEvent) => {
+    // Prevent the click from bubbling up to the dialog
+    event.stopPropagation();
+    console.log('File input clicked - preventing dialog close');
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => {
@@ -330,6 +336,12 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
             <DialogTitle>
               {isNewDestination ? 'Add New Destination' : 'Edit Destination'}
             </DialogTitle>
+            <DialogDescription>
+              {isNewDestination 
+                ? 'Add a new destination to your travel map. Search for a location and add photos and notes.' 
+                : 'Edit your destination details, photos, and notes.'
+              }
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 flex-1 overflow-y-auto pr-4">
@@ -459,7 +471,10 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                   </div>
                 ))}
                 {formData.photos.length < MAX_PHOTOS_PER_LOCATION && (
-                  <div className="relative aspect-square w-full h-full border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors bg-gray-50">
+                  <div 
+                    className="relative aspect-square w-full h-full border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors bg-gray-50"
+                    onClick={handleFileInputClick}
+                  >
                     <input
                       type="file"
                       accept="image/*"
@@ -468,6 +483,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       id="photo-upload"
                       disabled={isUploadingPhoto}
+                      onClick={handleFileInputClick}
                     />
                     <div className="text-center pointer-events-none">
                       <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
