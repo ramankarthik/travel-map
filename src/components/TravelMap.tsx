@@ -87,7 +87,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     script.defer = true;
     script.onload = () => {
       console.log('TravelMap: Google Maps script loaded successfully');
-      initializeMap();
+      // Don't call initializeMap here, let the useEffect handle it
     };
     script.onerror = (error) => {
       console.error('TravelMap: Failed to load Google Maps script:', error);
@@ -110,7 +110,18 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     console.log('TravelMap: window.google.maps exists:', !!(window.google && window.google.maps));
     
     if (!mapRef.current) {
-      console.log('TravelMap: mapRef.current is null');
+      console.log('TravelMap: mapRef.current is null, retrying in 100ms');
+      // Retry after a short delay to allow DOM to render
+      setTimeout(() => {
+        if (mapRef.current) {
+          console.log('TravelMap: mapRef.current now exists, initializing map');
+          initializeMap();
+        } else {
+          console.log('TravelMap: mapRef.current still null after retry');
+          setError('Failed to initialize map container');
+          setIsLoading(false);
+        }
+      }, 100);
       return;
     }
     
@@ -145,7 +156,15 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       setError('Failed to initialize map');
       setIsLoading(false);
     }
-  }, []);
+  }, [loadingTimeout]);
+
+  // Wait for container to be ready before initializing map
+  useEffect(() => {
+    if (mapRef.current && window.google && !mapInstanceRef.current && !isLoading) {
+      console.log('TravelMap: Container ready, initializing map');
+      initializeMap();
+    }
+  }, [mapRef.current, window.google, isLoading, initializeMap]);
 
   // Update markers when destinations change
   useEffect(() => {
