@@ -40,6 +40,24 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const markersRef = useRef<google.maps.Marker[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Add timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (isLoading) {
+        console.log('TravelMap: Loading timeout reached');
+        setError('Map loading timed out. Please check your internet connection and API key.');
+        setIsLoading(false);
+      }
+    }, 10000); // 10 second timeout
+
+    setLoadingTimeout(timeout);
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [isLoading]);
 
   // Load Google Maps API
   useEffect(() => {
@@ -117,6 +135,11 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       console.log('TravelMap: Map created successfully');
       mapInstanceRef.current = map;
       setIsLoading(false);
+      // Clear the loading timeout
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+        setLoadingTimeout(null);
+      }
     } catch (err) {
       console.error('TravelMap: Error creating map:', err);
       setError('Failed to initialize map');
@@ -226,6 +249,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600 text-sm">Loading map...</p>
+          <p className="mt-1 text-xs text-gray-500">API Key: {GOOGLE_MAPS_API_KEY ? 'Present' : 'Missing'}</p>
+          <p className="mt-1 text-xs text-gray-500">Google Maps: {window.google ? 'Loaded' : 'Not loaded'}</p>
         </div>
       </div>
     );
