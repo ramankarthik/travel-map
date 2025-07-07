@@ -20,7 +20,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     console.log('AuthContext: useEffect running')
-    
+    let didSetLoading = false;
     // Check for existing Supabase session
     const checkSession = async () => {
       try {
@@ -44,9 +44,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(storedUser)
         }
       }
-      
-      console.log('AuthContext: Setting isLoading to false')
+      console.log('AuthContext: Setting isLoading to false (checkSession)')
       setIsLoading(false)
+      didSetLoading = true;
     }
 
     checkSession()
@@ -60,15 +60,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userProfile = await createOrGetUserProfile(session.user)
           if (userProfile) {
             setUser(userProfile)
+            console.log('AuthContext: User set after SIGNED_IN:', userProfile)
+          } else {
+            console.log('AuthContext: No userProfile found after SIGNED_IN')
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
           clearStoredUser()
+          console.log('AuthContext: User set to null after SIGNED_OUT')
         }
+        console.log('AuthContext: Setting isLoading to false (onAuthStateChange)')
+        setIsLoading(false)
+        didSetLoading = true;
       }
     )
 
-    return () => subscription.unsubscribe()
+    // Fallback: always set isLoading to false after 5 seconds
+    const timeout = setTimeout(() => {
+      if (!didSetLoading) {
+        console.log('AuthContext: Fallback timeout - setting isLoading to false')
+        setIsLoading(false)
+      }
+    }, 5000)
+
+    return () => {
+      subscription.unsubscribe()
+      clearTimeout(timeout)
+    }
   }, [])
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
