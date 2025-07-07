@@ -64,7 +64,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     console.log('TravelMap: Loading Google Maps API script');
     // Load Google Maps API
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
     script.async = true;
     script.defer = true;
     script.onload = () => {
@@ -195,6 +195,20 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     }
   }, [destinations, onMarkerClick]);
 
+  // Check if map container is properly rendered
+  useEffect(() => {
+    if (mapRef.current) {
+      console.log('TravelMap: Map container rendered');
+      console.log('TravelMap: Container dimensions:', {
+        width: mapRef.current.offsetWidth,
+        height: mapRef.current.offsetHeight,
+        clientWidth: mapRef.current.clientWidth,
+        clientHeight: mapRef.current.clientHeight
+      });
+      console.log('TravelMap: Container styles:', window.getComputedStyle(mapRef.current));
+    }
+  }, []);
+
   if (error) {
     return (
       <div className={`w-full h-full rounded-lg bg-gray-100 flex items-center justify-center ${className}`}>
@@ -221,7 +235,26 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     <div 
       ref={mapRef} 
       className={`w-full h-full rounded-lg ${className}`}
-      style={{ height: '100%', minHeight: '600px' }}
-    />
+      style={{ 
+        height: '100%', 
+        minHeight: '600px',
+        border: '2px solid red', // Temporary border for debugging
+        backgroundColor: '#f0f0f0', // Temporary background for debugging
+        position: 'relative' // Added for debugging
+      }}
+    >
+      {/* Temporary debugging text */}
+      <div style={{
+        position: 'absolute',
+        top: '10px',
+        left: '10px',
+        background: 'rgba(255,255,255,0.9)',
+        padding: '5px',
+        fontSize: '12px',
+        zIndex: 1000
+      }}>
+        Map Container - Loading: {isLoading.toString()}, Error: {error || 'none'}
+      </div>
+    </div>
   );
 }; 
