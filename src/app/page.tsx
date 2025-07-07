@@ -226,9 +226,9 @@ export default function HomePage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-6 h-[calc(100vh-120px)]">
+        <div className="flex gap-6" style={{ height: 'calc(100vh - 140px)' }}>
           {/* Map */}
-          <div className="flex-1 bg-white rounded-lg shadow overflow-hidden">
+          <div className="flex-1 bg-white rounded-lg shadow overflow-hidden" style={{ minHeight: '600px' }}>
             <TravelMap 
               destinations={filteredDestinations}
               onMarkerClick={handleMapMarkerClick}
@@ -236,7 +236,7 @@ export default function HomePage() {
           </div>
 
           {/* Sidebar */}
-          <div className="w-96 bg-white rounded-lg shadow p-4 overflow-y-auto">
+          <div className="w-80 bg-white rounded-lg shadow p-4 overflow-y-auto">
             {/* Travel Stats Card */}
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Your travel stats</h3>

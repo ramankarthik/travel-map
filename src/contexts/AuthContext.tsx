@@ -17,10 +17,10 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasInitialized, setHasInitialized] = useState(false)
 
   useEffect(() => {
     console.log('AuthContext: useEffect running')
-    let didSetLoading = false;
     
     // Check for existing Supabase session immediately
     const checkSession = async () => {
@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log('AuthContext: Setting user from existing session:', currentUser)
             setUser(currentUser)
             setIsLoading(false)
-            didSetLoading = true;
+            setHasInitialized(true)
             return
           }
         }
@@ -58,11 +58,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       
-      if (!didSetLoading) {
-        console.log('AuthContext: Setting isLoading to false (checkSession)')
-        setIsLoading(false)
-        didSetLoading = true;
-      }
+      console.log('AuthContext: Setting isLoading to false (checkSession)')
+      setIsLoading(false)
+      setHasInitialized(true)
     }
 
     checkSession()
@@ -80,12 +78,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (userProfile) {
               setUser(userProfile)
               console.log('AuthContext: User set after SIGNED_IN:', userProfile)
-            } else {
-              console.log('AuthContext: No userProfile found after SIGNED_IN - setting loading to false anyway')
             }
           } catch (error) {
             console.error('AuthContext: Error in createOrGetUserProfile:', error)
-            console.log('AuthContext: Setting loading to false despite error')
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
@@ -94,25 +89,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (event === 'TOKEN_REFRESHED') {
           console.log('AuthContext: Token refreshed, session extended')
         }
-        console.log('AuthContext: Setting isLoading to false (onAuthStateChange)')
-        setIsLoading(false)
-        didSetLoading = true;
+        
+        // Only set loading to false if we haven't already initialized
+        if (!hasInitialized) {
+          console.log('AuthContext: Setting isLoading to false (onAuthStateChange)')
+          setIsLoading(false)
+          setHasInitialized(true)
+        }
       }
     )
 
-    // Fallback: always set isLoading to false after 3 seconds (reduced from 5)
+    // Fallback: always set isLoading to false after 2 seconds
     const timeout = setTimeout(() => {
-      if (!didSetLoading) {
+      if (!hasInitialized) {
         console.log('AuthContext: Fallback timeout - setting isLoading to false')
         setIsLoading(false)
+        setHasInitialized(true)
       }
-    }, 3000)
+    }, 2000)
 
     return () => {
       subscription.unsubscribe()
       clearTimeout(timeout)
     }
-  }, [])
+  }, [hasInitialized])
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     console.log('AuthContext: Attempting login with:', email)

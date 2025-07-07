@@ -73,6 +73,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         // Force a resize to ensure proper dimensions
         setTimeout(() => {
           map.invalidateSize();
+          // Force another resize after a short delay to ensure proper sizing
+          setTimeout(() => {
+            map.invalidateSize();
+          }, 100);
         }, 200);
 
         // Add OpenStreetMap tiles
@@ -265,7 +269,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
   if (!isClient) {
     return (
-      <div className={`w-full h-full rounded-lg bg-gray-100 flex items-center justify-center ${className}`}>
+      <div className={`w-full h-full rounded-lg bg-gray-100 flex items-center justify-center ${className}`} style={{ minHeight: '600px' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600 text-sm">Loading map...</p>
@@ -280,7 +284,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       className={`w-full h-full rounded-lg ${className}`}
       style={{ 
         height: '100%',
-        width: '100%'
+        width: '100%',
+        minHeight: '600px'
       }}
     />
   );
