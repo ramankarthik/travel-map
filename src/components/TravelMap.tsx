@@ -164,10 +164,28 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
   // Wait for container to be ready before initializing map
   useEffect(() => {
+    console.log('TravelMap: useEffect triggered - checking container readiness');
+    console.log('TravelMap: mapRef.current exists:', !!mapRef.current);
+    console.log('TravelMap: googleMapsLoaded:', googleMapsLoaded);
+    console.log('TravelMap: mapInstanceRef.current exists:', !!mapInstanceRef.current);
+    console.log('TravelMap: isLoading:', isLoading);
+    
     const checkAndInitialize = () => {
+      console.log('TravelMap: checkAndInitialize called');
+      console.log('TravelMap: mapRef.current exists:', !!mapRef.current);
+      console.log('TravelMap: googleMapsLoaded:', googleMapsLoaded);
+      console.log('TravelMap: mapInstanceRef.current exists:', !!mapInstanceRef.current);
+      console.log('TravelMap: isLoading:', isLoading);
+      
       if (mapRef.current && googleMapsLoaded && !mapInstanceRef.current && !isLoading) {
         console.log('TravelMap: Container ready, initializing map');
         initializeMap();
+      } else {
+        console.log('TravelMap: Container not ready yet');
+        if (!mapRef.current) console.log('TravelMap: - mapRef.current is null');
+        if (!googleMapsLoaded) console.log('TravelMap: - googleMapsLoaded is false');
+        if (mapInstanceRef.current) console.log('TravelMap: - mapInstanceRef.current exists');
+        if (isLoading) console.log('TravelMap: - isLoading is true');
       }
     };
 
@@ -253,6 +271,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
   // Check if map container is properly rendered
   useEffect(() => {
+    console.log('TravelMap: Container rendering useEffect called');
     if (mapRef.current) {
       console.log('TravelMap: Map container rendered');
       console.log('TravelMap: Container dimensions:', {
@@ -262,6 +281,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         clientHeight: mapRef.current.clientHeight
       });
       console.log('TravelMap: Container styles:', window.getComputedStyle(mapRef.current));
+    } else {
+      console.log('TravelMap: mapRef.current is null in container rendering useEffect');
     }
   }, []);
 
