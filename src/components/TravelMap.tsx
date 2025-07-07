@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface Destination {
   id: string;
@@ -23,205 +23,113 @@ interface TravelMapProps {
   onMarkerClick: (destination: Destination) => void;
 }
 
+// Google Maps API key - you'll need to add this to your environment variables
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
 export const TravelMap: React.FC<TravelMapProps> = ({ 
   className = '', 
   destinations, 
   onMarkerClick
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-  const [isClient, setIsClient] = useState(false);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Load Google Maps API
   useEffect(() => {
-    setIsClient(true);
+    if (!GOOGLE_MAPS_API_KEY) {
+      setError('Google Maps API key not configured');
+      setIsLoading(false);
+      return;
+    }
+
+    // Check if Google Maps is already loaded
+    if (window.google && window.google.maps) {
+      initializeMap();
+      return;
+    }
+
+    // Load Google Maps API
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = initializeMap;
+    script.onerror = () => {
+      setError('Failed to load Google Maps');
+      setIsLoading(false);
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      document.head.removeChild(script);
+    };
   }, []);
 
-  useEffect(() => {
-    if (!isClient || !mapRef.current || mapInstanceRef.current) return;
+  const initializeMap = useCallback(() => {
+    if (!mapRef.current || !window.google) return;
 
-    // Dynamically import Leaflet only on client side
-    const initMap = async () => {
-      try {
-        const L = (await import('leaflet')).default;
-        // CSS is loaded via CDN in the head
+    try {
+      const map = new google.maps.Map(mapRef.current, {
+        center: { lat: 20, lng: 0 },
+        zoom: 2,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+        zoomControl: true,
+        gestureHandling: 'cooperative'
+      });
 
-        // Fix for default markers in Leaflet
-        delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
-        L.Icon.Default.mergeOptions({
-          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-        });
-
-        // Initialize the map
-        if (!mapRef.current) return;
-        const map = L.map(mapRef.current, {
-          minZoom: 1,
-          maxZoom: 18,
-          worldCopyJump: false,
-          maxBounds: [[-90, -180], [90, 180]],
-          maxBoundsViscosity: 1.0,
-          preferCanvas: true,
-          zoomControl: true,
-          attributionControl: true
-        }).setView([20, 0], 2);
-        
-        // Fit to world bounds
-        map.fitWorld({ padding: [20, 20] });
-        
-        // Force a resize to ensure proper dimensions
-        setTimeout(() => {
-          map.invalidateSize();
-          // Force another resize after a short delay to ensure proper sizing
-          setTimeout(() => {
-            map.invalidateSize();
-          }, 100);
-        }, 200);
-
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        // Create custom icons
-        const redCameraIcon = L.divIcon({
-          html: `
-            <div style="
-              background: #ef4444;
-              border: 2px solid white;
-              border-radius: 50%;
-              width: 30px;
-              height: 30px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            ">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                <path d="M12 12m-3.2 0a3.2 3.2 0 1 0 6.4 0a3.2 3.2 0 1 0 -6.4 0"/>
-                <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
-              </svg>
-            </div>
-          `,
-          className: 'custom-div-icon',
-          iconSize: [30, 30],
-          iconAnchor: [15, 15]
-        });
-
-        const bluePinIcon = L.divIcon({
-          html: `
-            <div style="
-              background: #3b82f6;
-              border: 2px solid white;
-              border-radius: 50%;
-              width: 30px;
-              height: 30px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            ">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-              </svg>
-            </div>
-          `,
-          className: 'custom-div-icon',
-          iconSize: [30, 30],
-          iconAnchor: [15, 15]
-        });
-
-        // Store map instance
-        mapInstanceRef.current = map;
-        markersRef.current = [];
-
-        // Store the map instance
-        mapInstanceRef.current = map;
-      } catch (error) {
-        console.error('Error loading map:', error);
-      }
-    };
-
-    initMap();
-
-    // Cleanup function
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, [isClient]);
+      mapInstanceRef.current = map;
+      setIsLoading(false);
+    } catch (err) {
+      setError('Failed to initialize map');
+      setIsLoading(false);
+    }
+  }, []);
 
   // Update markers when destinations change
   useEffect(() => {
-    if (!mapInstanceRef.current || !isClient) return;
+    if (!mapInstanceRef.current) return;
 
-    const L = require('leaflet');
-    
     // Clear existing markers
     markersRef.current.forEach(marker => {
-      mapInstanceRef.current.removeLayer(marker);
+      marker.setMap(null);
     });
     markersRef.current = [];
 
-    // Create custom icons
-    const redCameraIcon = L.divIcon({
-      html: `
-        <div style="
-          background: #ef4444;
-          border: 2px solid white;
-          border-radius: 50%;
-          width: 30px;
-          height: 30px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        ">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-            <path d="M12 12m-3.2 0a3.2 3.2 0 1 0 6.4 0a3.2 3.2 0 1 0 -6.4 0"/>
-            <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
-          </svg>
-        </div>
-      `,
-      className: 'custom-div-icon',
-      iconSize: [30, 30],
-      iconAnchor: [15, 15]
-    });
-
-    const bluePinIcon = L.divIcon({
-      html: `
-        <div style="
-          background: #3b82f6;
-          border: 2px solid white;
-          border-radius: 50%;
-          width: 30px;
-          height: 30px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        ">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-          </svg>
-        </div>
-      `,
-      className: 'custom-div-icon',
-      iconSize: [30, 30],
-      iconAnchor: [15, 15]
-    });
-
-    // Add markers for each destination
-    console.log('Adding markers for destinations:', destinations);
+    // Create new markers
     destinations.forEach(dest => {
-      console.log('Adding marker for:', dest.name, 'at', dest.lat, dest.lng, 'status:', dest.status);
-      const icon = dest.status === 'visited' ? redCameraIcon : bluePinIcon;
-      const marker = L.marker([dest.lat, dest.lng], { icon })
-        .addTo(mapInstanceRef.current)
-        .bindPopup(`
+      const marker = new google.maps.Marker({
+        position: { lat: dest.lat, lng: dest.lng },
+        map: mapInstanceRef.current,
+        title: dest.name,
+        icon: {
+          url: dest.status === 'visited' 
+            ? 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+              <svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="15" cy="15" r="13" fill="#ef4444" stroke="white" stroke-width="2"/>
+                <path d="M12 12m-3.2 0a3.2 3.2 0 1 0 6.4 0a3.2 3.2 0 1 0 -6.4 0" fill="white"/>
+                <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z" fill="white"/>
+              </svg>
+            `)
+            : 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+              <svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="15" cy="15" r="13" fill="#3b82f6" stroke="white" stroke-width="2"/>
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="white"/>
+              </svg>
+            `),
+          scaledSize: new google.maps.Size(30, 30),
+          anchor: new google.maps.Point(15, 15)
+        }
+      });
+
+      // Add info window
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
           <div class="p-2">
             <h3 class="font-bold text-lg">${dest.name}</h3>
             <p class="text-gray-600">${dest.country}</p>
@@ -233,43 +141,41 @@ export const TravelMap: React.FC<TravelMapProps> = ({
               ${dest.status}
             </span>
           </div>
-        `);
+        `
+      });
 
-      // Add click event to open modal
-      marker.on('click', () => {
+      marker.addListener('click', () => {
+        infoWindow.open(mapInstanceRef.current, marker);
         onMarkerClick(dest);
-      });
-
-      // Add hover highlighting to the marker itself
-      marker.on('mouseover', () => {
-        const iconElement = marker.getElement();
-        if (iconElement) {
-          const iconDiv = iconElement.querySelector('div');
-          if (iconDiv) {
-            iconDiv.style.transform = 'scale(1.2)';
-            iconDiv.style.transition = 'transform 0.2s ease';
-          }
-        }
-      });
-
-      marker.on('mouseout', () => {
-        const iconElement = marker.getElement();
-        if (iconElement) {
-          const iconDiv = iconElement.querySelector('div');
-          if (iconDiv) {
-            iconDiv.style.transform = 'scale(1)';
-          }
-        }
       });
 
       markersRef.current.push(marker);
     });
 
-  }, [destinations, onMarkerClick, isClient]);
+    // Fit bounds to show all destinations
+    if (destinations.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      destinations.forEach(dest => {
+        bounds.extend({ lat: dest.lat, lng: dest.lng });
+      });
+      mapInstanceRef.current.fitBounds(bounds);
+    }
+  }, [destinations, onMarkerClick]);
 
-  if (!isClient) {
+  if (error) {
     return (
-      <div className={`w-full h-full rounded-lg bg-gray-100 flex items-center justify-center ${className}`} style={{ minHeight: '600px' }}>
+      <div className={`w-full h-full rounded-lg bg-gray-100 flex items-center justify-center ${className}`}>
+        <div className="text-center">
+          <p className="text-red-600 mb-2">{error}</p>
+          <p className="text-sm text-gray-600">Please check your Google Maps API key configuration</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className={`w-full h-full rounded-lg bg-gray-100 flex items-center justify-center ${className}`}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600 text-sm">Loading map...</p>
@@ -282,11 +188,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     <div 
       ref={mapRef} 
       className={`w-full h-full rounded-lg ${className}`}
-      style={{ 
-        height: '100%',
-        width: '100%',
-        minHeight: '600px'
-      }}
+      style={{ height: '100%', minHeight: '600px' }}
     />
   );
 }; 

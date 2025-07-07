@@ -143,14 +143,9 @@
   background-color: hsl(var(--muted-foreground));
 }
 
-/* Map container styles */
-.leaflet-container {
+/* Google Maps container styles */
+.google-map-container {
   height: 100% !important;
   width: 100% !important;
   min-height: 600px !important;
-}
-
-.leaflet-map-pane {
-  height: 100% !important;
-  width: 100% !important;
 }
