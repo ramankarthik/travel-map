@@ -89,7 +89,7 @@ export const loginUser = async (email: string, password: string): Promise<User |
   }
 }
 
-export const createOrGetUserProfile = async (supabaseUser: Record<string, unknown>): Promise<User | null> => {
+export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | null> => {
   try {
     console.log('createOrGetUserProfile: Starting for user:', supabaseUser.id)
     

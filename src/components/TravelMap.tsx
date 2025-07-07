@@ -62,19 +62,18 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           worldCopyJump: false,
           maxBounds: [[-90, -180], [90, 180]],
           maxBoundsViscosity: 1.0,
-          // Force landscape orientation
           preferCanvas: true,
           zoomControl: true,
           attributionControl: true
-        }).setView([20, 0], 1); // Max zoomed out
+        }).setView([20, 0], 2);
         
-        // Fit to world bounds for landscape view
-        map.fitWorld({ padding: [0, 0] });
+        // Fit to world bounds
+        map.fitWorld({ padding: [20, 20] });
         
         // Force a resize to ensure proper dimensions
         setTimeout(() => {
           map.invalidateSize();
-        }, 100);
+        }, 200);
 
         // Add OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -280,11 +279,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       ref={mapRef} 
       className={`w-full h-full rounded-lg ${className}`}
       style={{ 
-        height: '100%', 
-        minHeight: '100%',
-        width: '100%',
-        minWidth: '100%',
-        aspectRatio: 'auto'
+        height: '100%',
+        width: '100%'
       }}
     />
   );

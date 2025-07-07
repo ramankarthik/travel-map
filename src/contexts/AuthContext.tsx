@@ -22,23 +22,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('AuthContext: useEffect running')
     let didSetLoading = false;
     
-    // Check for existing Supabase session
+    // Check for existing Supabase session immediately
     const checkSession = async () => {
       try {
-        const currentUser = await getCurrentUser()
-        console.log('AuthContext: getCurrentUser result:', currentUser)
+        // First check if there's an existing session
+        const { data: { session } } = await supabase.auth.getSession()
+        console.log('AuthContext: Initial session check:', session ? 'found' : 'not found')
         
-        if (currentUser) {
-          console.log('AuthContext: Supabase user found:', currentUser)
-          setUser(currentUser)
-        } else {
-          console.log('AuthContext: No Supabase user found, checking for stored demo user')
-          // Fallback to demo user if no Supabase session
-          const storedUser = getStoredUser()
-          console.log('AuthContext: Stored demo user found:', storedUser)
-          if (storedUser) {
-            setUser(storedUser)
+        if (session?.user) {
+          console.log('AuthContext: Found existing session for user:', session.user.id)
+          const currentUser = await getCurrentUser()
+          console.log('AuthContext: getCurrentUser result:', currentUser)
+          
+          if (currentUser) {
+            console.log('AuthContext: Setting user from existing session:', currentUser)
+            setUser(currentUser)
+            setIsLoading(false)
+            didSetLoading = true;
+            return
           }
+        }
+        
+        // Fallback to demo user if no Supabase session
+        const storedUser = getStoredUser()
+        console.log('AuthContext: Stored demo user found:', storedUser)
+        if (storedUser) {
+          setUser(storedUser)
         }
       } catch (error) {
         console.error('AuthContext: Error checking session:', error)
@@ -48,9 +57,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(storedUser)
         }
       }
-      console.log('AuthContext: Setting isLoading to false (checkSession)')
-      setIsLoading(false)
-      didSetLoading = true;
+      
+      if (!didSetLoading) {
+        console.log('AuthContext: Setting isLoading to false (checkSession)')
+        setIsLoading(false)
+        didSetLoading = true;
+      }
     }
 
     checkSession()
@@ -88,13 +100,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     )
 
-    // Fallback: always set isLoading to false after 5 seconds
+    // Fallback: always set isLoading to false after 3 seconds (reduced from 5)
     const timeout = setTimeout(() => {
       if (!didSetLoading) {
         console.log('AuthContext: Fallback timeout - setting isLoading to false')
         setIsLoading(false)
       }
-    }, 5000)
+    }, 3000)
 
     return () => {
       subscription.unsubscribe()
