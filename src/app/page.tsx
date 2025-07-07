@@ -224,35 +224,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Filter Buttons */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-          <div className="flex gap-2">
-            <Button
-              variant={filteredStatus === null ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilteredStatus(null)}
-            >
-              All ({stats.totalCount})
-            </Button>
-            <Button
-              variant={filteredStatus === 'visited' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilteredStatus('visited')}
-            >
-              Visited ({stats.visitedCount})
-            </Button>
-            <Button
-              variant={filteredStatus === 'wishlist' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilteredStatus('wishlist')}
-            >
-              Wishlist ({stats.wishlistCount})
-            </Button>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex gap-6 h-[calc(100vh-200px)]">
@@ -293,7 +264,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-blue-600" />
                 <h3 className="text-lg font-semibold">Destinations</h3>
@@ -309,6 +280,31 @@ export default function HomePage() {
                 <Plus className="w-3 h-3" />
                 Add New
               </button>
+            </div>
+
+            {/* Filter Buttons (moved here) */}
+            <div className="flex gap-2 mb-4">
+              <Button
+                variant={filteredStatus === null ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilteredStatus(null)}
+              >
+                All ({stats.totalCount})
+              </Button>
+              <Button
+                variant={filteredStatus === 'visited' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilteredStatus('visited')}
+              >
+                Visited ({stats.visitedCount})
+              </Button>
+              <Button
+                variant={filteredStatus === 'wishlist' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilteredStatus('wishlist')}
+              >
+                Wishlist ({stats.wishlistCount})
+              </Button>
             </div>
 
             {/* Destinations List */}
