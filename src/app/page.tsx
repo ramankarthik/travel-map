@@ -8,6 +8,7 @@ import { MapPin, Plus, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DestinationModal } from '@/components/DestinationModal';
 import { Destination, DestinationsService, CreateDestinationData, UpdateDestinationData } from '@/lib/destinations';
+import { ErrorBoundary } from 'react-error-boundary';
 
 // Memoized country to continent mapping
 const COUNTRY_TO_CONTINENT: { [key: string]: string } = {
@@ -229,10 +230,17 @@ export default function HomePage() {
         <div className="flex gap-6" style={{ height: 'calc(100vh - 140px)' }}>
           {/* Map */}
           <div className="flex-1 bg-white rounded-lg shadow overflow-hidden" style={{ minHeight: '600px' }}>
-            <TravelMap 
-              destinations={filteredDestinations}
-              onMarkerClick={handleMapMarkerClick}
-            />
+            <div style={{ border: '2px solid blue', padding: '10px', backgroundColor: '#e6f3ff' }}>
+              <p style={{ fontSize: '12px', margin: '0 0 10px 0' }}>Debug: Map container</p>
+              <p style={{ fontSize: '12px', margin: '0 0 10px 0' }}>Destinations count: {filteredDestinations.length}</p>
+              <p style={{ fontSize: '12px', margin: '0 0 10px 0' }}>Loading destinations: {isLoadingDestinations.toString()}</p>
+              <ErrorBoundary fallback={<div>Error loading map.</div>}>
+                <TravelMap 
+                  destinations={filteredDestinations}
+                  onMarkerClick={handleMapMarkerClick}
+                />
+              </ErrorBoundary>
+            </div>
           </div>
 
           {/* Sidebar */}
