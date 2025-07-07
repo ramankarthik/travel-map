@@ -91,44 +91,66 @@ export const loginUser = async (email: string, password: string): Promise<User |
 
 export const createOrGetUserProfile = async (supabaseUser: Record<string, unknown>): Promise<User | null> => {
   try {
-    // First, try to get existing user profile
-    const { data: existingUser, error: fetchError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', supabaseUser.id)
-      .single()
+    console.log('createOrGetUserProfile: Starting for user:', supabaseUser.id)
+    
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise<null>((_, reject) => {
+      setTimeout(() => reject(new Error('createOrGetUserProfile timeout')), 10000)
+    })
+    
+    const profilePromise = (async () => {
+      // First, try to get existing user profile
+      const { data: existingUser, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single()
 
-    if (existingUser) {
-      return {
-        id: existingUser.id,
-        email: existingUser.email,
-        name: existingUser.name
+      if (fetchError) {
+        console.log('createOrGetUserProfile: Fetch error:', fetchError)
       }
-    }
 
-    // If user doesn't exist, create a new profile
-    const { data: newUser, error: insertError } = await supabase
-      .from('users')
-      .insert({
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        name: supabaseUser.user_metadata?.name || supabaseUser.email || ''
-      })
-      .select()
-      .single()
+      if (existingUser) {
+        console.log('createOrGetUserProfile: Found existing user:', existingUser)
+        return {
+          id: existingUser.id,
+          email: existingUser.email,
+          name: existingUser.name
+        }
+      }
 
-    if (insertError) {
-      console.error('Error creating user profile:', insertError)
-      return null
-    }
+      console.log('createOrGetUserProfile: Creating new user profile')
+      // If user doesn't exist, create a new profile
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: supabaseUser.id,
+          email: supabaseUser.email || '',
+          name: supabaseUser.user_metadata?.name || supabaseUser.email || ''
+        })
+        .select()
+        .single()
 
-    return {
-      id: newUser.id,
-      email: newUser.email,
-      name: newUser.name
-    }
+      if (insertError) {
+        console.error('createOrGetUserProfile: Error creating user profile:', insertError)
+        return null
+      }
+
+      console.log('createOrGetUserProfile: Created new user:', newUser)
+      return {
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name
+      }
+    })()
+
+    // Race between the profile creation and timeout
+    const result = await Promise.race([profilePromise, timeoutPromise])
+    console.log('createOrGetUserProfile: Completed successfully:', result)
+    return result
+    
   } catch (error) {
-    console.error('Error in createOrGetUserProfile:', error)
+    console.error('createOrGetUserProfile: Error in createOrGetUserProfile:', error)
     return null
   }
 }

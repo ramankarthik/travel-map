@@ -57,12 +57,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('AuthContext: Auth state changed:', event, session)
         
         if (event === 'SIGNED_IN' && session?.user) {
-          const userProfile = await createOrGetUserProfile(session.user)
-          if (userProfile) {
-            setUser(userProfile)
-            console.log('AuthContext: User set after SIGNED_IN:', userProfile)
-          } else {
-            console.log('AuthContext: No userProfile found after SIGNED_IN')
+          console.log('AuthContext: Processing SIGNED_IN event for user:', session.user.id)
+          try {
+            const userProfile = await createOrGetUserProfile(session.user)
+            console.log('AuthContext: createOrGetUserProfile result:', userProfile)
+            if (userProfile) {
+              setUser(userProfile)
+              console.log('AuthContext: User set after SIGNED_IN:', userProfile)
+            } else {
+              console.log('AuthContext: No userProfile found after SIGNED_IN - setting loading to false anyway')
+            }
+          } catch (error) {
+            console.error('AuthContext: Error in createOrGetUserProfile:', error)
+            console.log('AuthContext: Setting loading to false despite error')
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
