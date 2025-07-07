@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,21 +18,7 @@ export const LoginPage = () => {
   const [isSigningUp, setIsSigningUp] = useState(false)
   const [isLoginMode, setIsLoginMode] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
-  const { login, logout } = useAuth()
-
-  // Clear any existing session when login page loads
-  useEffect(() => {
-    const clearSession = async () => {
-      console.log('LoginPage: Clearing any existing session')
-      try {
-        await logout()
-        console.log('LoginPage: Session cleared')
-      } catch (error) {
-        console.log('LoginPage: No session to clear or error:', error)
-      }
-    }
-    clearSession()
-  }, [logout])
+  const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -79,6 +79,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null)
           clearStoredUser()
           console.log('AuthContext: User set to null after SIGNED_OUT')
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('AuthContext: Token refreshed, session extended')
         }
         console.log('AuthContext: Setting isLoading to false (onAuthStateChange)')
         setIsLoading(false)
