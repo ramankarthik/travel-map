@@ -268,6 +268,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     <div 
       ref={mapRef} 
       className={`w-full h-full rounded-lg ${className}`}
+      style={{ height: '100%', minHeight: '100%' }}
     />
   );
 }; 

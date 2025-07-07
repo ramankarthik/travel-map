@@ -21,14 +21,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log('AuthContext: useEffect running')
     let didSetLoading = false;
+    
     // Check for existing Supabase session
     const checkSession = async () => {
       try {
         const currentUser = await getCurrentUser()
+        console.log('AuthContext: getCurrentUser result:', currentUser)
+        
         if (currentUser) {
           console.log('AuthContext: Supabase user found:', currentUser)
           setUser(currentUser)
         } else {
+          console.log('AuthContext: No Supabase user found, checking for stored demo user')
           // Fallback to demo user if no Supabase session
           const storedUser = getStoredUser()
           console.log('AuthContext: Stored demo user found:', storedUser)
