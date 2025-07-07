@@ -226,10 +226,10 @@ export default function HomePage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-6" style={{ height: 'calc(100vh - 120px)' }}>
+        <div className="flex gap-6" style={{ height: 'calc(100vh - 120px)', minHeight: '600px' }}>
           {/* Map */}
-          <div className="flex-1 bg-white rounded-lg shadow overflow-hidden relative">
-            <div className="absolute inset-0">
+          <div className="flex-1 bg-white rounded-lg shadow overflow-hidden relative" style={{ minWidth: '60%' }}>
+            <div className="absolute inset-0 w-full h-full">
               <TravelMap 
                 destinations={filteredDestinations}
                 onMarkerClick={handleMapMarkerClick}
