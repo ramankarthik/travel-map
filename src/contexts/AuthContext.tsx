@@ -153,7 +153,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
   }), [user, login, logout, isLoading])
 
-  console.log('AuthContext: Current state:', { user, isLoading })
+  console.log('AuthContext: Current state:', { user, isLoading, hasInitialized })
+  console.log('AuthContext: User details:', user ? { id: user.id, name: user.name, email: user.email } : 'null')
 
   return (
     <AuthContext.Provider value={value}>

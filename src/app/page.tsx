@@ -46,6 +46,10 @@ export default function HomePage() {
   const [isNewDestination, setIsNewDestination] = useState(false);
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(false);
 
+  // Debug logging
+  console.log('HomePage: Component rendered');
+  console.log('HomePage: Auth state:', { user: !!user, isLoading, userDetails: user });
+
   const loadDestinations = useCallback(async () => {
     if (!user) {
       console.log('No user found, skipping destination load');
@@ -184,22 +188,41 @@ export default function HomePage() {
   console.log('Stats:', stats);
 
   if (isLoading) {
+    console.log('HomePage: Showing loading screen');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
+          <p style={{ fontSize: '12px', color: 'red', marginTop: '10px' }}>DEBUG: Loading state</p>
         </div>
       </div>
     );
   }
 
   if (!user) {
+    console.log('HomePage: Showing login page');
     return <LoginPage />;
   }
 
+  console.log('HomePage: Showing main app');
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Debug Banner */}
+      <div style={{ 
+        background: 'red', 
+        color: 'white', 
+        padding: '5px', 
+        textAlign: 'center', 
+        fontSize: '12px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000
+      }}>
+        DEBUG: Main app is rendering - User: {user?.name || 'unknown'}
+      </div>
+      
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
