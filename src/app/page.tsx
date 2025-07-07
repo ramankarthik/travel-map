@@ -226,13 +226,15 @@ export default function HomePage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-6 h-[calc(100vh-200px)]">
+        <div className="flex gap-6" style={{ height: 'calc(100vh - 120px)' }}>
           {/* Map */}
-          <div className="flex-1 bg-white rounded-lg shadow overflow-hidden">
-            <TravelMap 
-              destinations={filteredDestinations}
-              onMarkerClick={handleMapMarkerClick}
-            />
+          <div className="flex-1 bg-white rounded-lg shadow overflow-hidden flex flex-col">
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <TravelMap 
+                destinations={filteredDestinations}
+                onMarkerClick={handleMapMarkerClick}
+              />
+            </div>
           </div>
 
           {/* Sidebar */}
@@ -240,24 +242,12 @@ export default function HomePage() {
             {/* Travel Stats Card */}
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Your travel stats</h3>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{stats.totalCount}</div>
-                  <div className="text-sm text-gray-600">Total</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{stats.visitedCount}</div>
-                  <div className="text-sm text-gray-600">Visited</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">{stats.wishlistCount}</div>
-                  <div className="text-sm text-gray-600">Wishlist</div>
-                </div>
+              <div className="grid grid-cols-1 gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600">{stats.uniqueCountries}</div>
                   <div className="text-sm text-gray-600">Countries</div>
                 </div>
-                <div className="text-center col-span-2">
+                <div className="text-center">
                   <div className="text-2xl font-bold text-indigo-600">{stats.uniqueContinents}</div>
                   <div className="text-sm text-gray-600">Continents</div>
                 </div>
