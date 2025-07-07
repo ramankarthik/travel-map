@@ -24,6 +24,17 @@ export const LoginPage = () => {
     e.preventDefault()
     setError('')
     
+    // Validate required fields
+    if (!email.trim()) {
+      setError('Email is required')
+      return
+    }
+    
+    if (!password.trim()) {
+      setError('Password is required')
+      return
+    }
+    
     if (isLoginMode) {
       setIsLoggingIn(true)
       console.log('LoginPage: Attempting login with:', email, password)
@@ -190,7 +201,7 @@ export const LoginPage = () => {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={isLoggingIn || isSigningUp}
+                disabled={isLoggingIn || isSigningUp || !email.trim() || !password.trim()}
               >
                 {isLoggingIn || isSigningUp ? (
                   <>

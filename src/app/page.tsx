@@ -228,11 +228,13 @@ export default function HomePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex gap-6" style={{ height: 'calc(100vh - 120px)' }}>
           {/* Map */}
-          <div className="flex-1 bg-white rounded-lg shadow overflow-hidden">
-            <TravelMap 
-              destinations={filteredDestinations}
-              onMarkerClick={handleMapMarkerClick}
-            />
+          <div className="flex-1 bg-white rounded-lg shadow overflow-hidden relative">
+            <div className="absolute inset-0">
+              <TravelMap 
+                destinations={filteredDestinations}
+                onMarkerClick={handleMapMarkerClick}
+              />
+            </div>
           </div>
 
           {/* Sidebar */}
