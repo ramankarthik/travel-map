@@ -41,6 +41,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
 
   // Add timeout to prevent infinite loading
   useEffect(() => {
@@ -87,6 +88,9 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     script.defer = true;
     script.onload = () => {
       console.log('TravelMap: Google Maps script loaded successfully');
+      console.log('TravelMap: window.google exists after load:', !!window.google);
+      console.log('TravelMap: window.google.maps exists after load:', !!(window.google && window.google.maps));
+      setGoogleMapsLoaded(true);
       // Don't call initializeMap here, let the useEffect handle it
     };
     script.onerror = (error) => {
@@ -160,11 +164,21 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
   // Wait for container to be ready before initializing map
   useEffect(() => {
-    if (mapRef.current && window.google && !mapInstanceRef.current && !isLoading) {
-      console.log('TravelMap: Container ready, initializing map');
-      initializeMap();
-    }
-  }, [mapRef.current, window.google, isLoading, initializeMap]);
+    const checkAndInitialize = () => {
+      if (mapRef.current && googleMapsLoaded && !mapInstanceRef.current && !isLoading) {
+        console.log('TravelMap: Container ready, initializing map');
+        initializeMap();
+      }
+    };
+
+    // Check immediately
+    checkAndInitialize();
+    
+    // Also check after a short delay to ensure everything is ready
+    const timeout = setTimeout(checkAndInitialize, 200);
+    
+    return () => clearTimeout(timeout);
+  }, [isLoading, googleMapsLoaded, initializeMap]);
 
   // Update markers when destinations change
   useEffect(() => {
