@@ -26,6 +26,10 @@ interface TravelMapProps {
 // Google Maps API key - you'll need to add this to your environment variables
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
+// Debug: Log API key info (without exposing the full key)
+console.log('TravelMap: Environment check - API key exists:', !!GOOGLE_MAPS_API_KEY);
+console.log('TravelMap: Environment check - API key starts with:', GOOGLE_MAPS_API_KEY.substring(0, 10) + '...');
+
 export const TravelMap: React.FC<TravelMapProps> = ({ 
   className = '', 
   destinations, 
@@ -39,7 +43,12 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
   // Load Google Maps API
   useEffect(() => {
+    console.log('TravelMap: Starting Google Maps initialization');
+    console.log('TravelMap: API Key exists:', !!GOOGLE_MAPS_API_KEY);
+    console.log('TravelMap: API Key length:', GOOGLE_MAPS_API_KEY.length);
+    
     if (!GOOGLE_MAPS_API_KEY) {
+      console.log('TravelMap: No API key found');
       setError('Google Maps API key not configured');
       setIsLoading(false);
       return;
@@ -47,31 +56,53 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
     // Check if Google Maps is already loaded
     if (window.google && window.google.maps) {
+      console.log('TravelMap: Google Maps already loaded, initializing map');
       initializeMap();
       return;
     }
 
+    console.log('TravelMap: Loading Google Maps API script');
     // Load Google Maps API
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
     script.async = true;
     script.defer = true;
-    script.onload = initializeMap;
-    script.onerror = () => {
+    script.onload = () => {
+      console.log('TravelMap: Google Maps script loaded successfully');
+      initializeMap();
+    };
+    script.onerror = (error) => {
+      console.error('TravelMap: Failed to load Google Maps script:', error);
       setError('Failed to load Google Maps');
       setIsLoading(false);
     };
     document.head.appendChild(script);
 
     return () => {
-      document.head.removeChild(script);
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
     };
   }, []);
 
   const initializeMap = useCallback(() => {
-    if (!mapRef.current || !window.google) return;
+    console.log('TravelMap: initializeMap called');
+    console.log('TravelMap: mapRef.current exists:', !!mapRef.current);
+    console.log('TravelMap: window.google exists:', !!window.google);
+    console.log('TravelMap: window.google.maps exists:', !!(window.google && window.google.maps));
+    
+    if (!mapRef.current) {
+      console.log('TravelMap: mapRef.current is null');
+      return;
+    }
+    
+    if (!window.google) {
+      console.log('TravelMap: window.google is not available');
+      return;
+    }
 
     try {
+      console.log('TravelMap: Creating Google Maps instance');
       const map = new google.maps.Map(mapRef.current, {
         center: { lat: 20, lng: 0 },
         zoom: 2,
@@ -83,9 +114,11 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         gestureHandling: 'cooperative'
       });
 
+      console.log('TravelMap: Map created successfully');
       mapInstanceRef.current = map;
       setIsLoading(false);
     } catch (err) {
+      console.error('TravelMap: Error creating map:', err);
       setError('Failed to initialize map');
       setIsLoading(false);
     }
