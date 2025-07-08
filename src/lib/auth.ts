@@ -7,15 +7,6 @@ export interface User {
   created_at: string
 }
 
-export interface UserProfile {
-  id: string
-  user_id: string
-  name: string
-  email: string
-  created_at: string
-  updated_at: string
-}
-
 // Demo user data for testing
 const DEMO_USER: User = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -50,9 +41,13 @@ export const loginUser = async (email: string, password: string): Promise<User |
       return DEMO_USER
     }
 
-    // For real users, get their profile
-    const userProfile = await createOrGetUserProfile(data.user)
-    return userProfile
+    // For real users, create user object from auth data
+    return {
+      id: data.user.id,
+      email: data.user.email || '',
+      name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+      created_at: data.user.created_at
+    }
   } catch (error) {
     console.error('Login error:', error)
     return null
@@ -81,62 +76,15 @@ export const signUpUser = async (email: string, password: string, name: string):
       return null
     }
 
-    // Create user profile
-    const userProfile = await createOrGetUserProfile(data.user)
-    return userProfile
+    // Create user object from auth data
+    return {
+      id: data.user.id,
+      email: data.user.email || '',
+      name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+      created_at: data.user.created_at
+    }
   } catch (error) {
     console.error('Signup error:', error)
-    return null
-  }
-}
-
-export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | null> => {
-  try {
-    // Check if user profile already exists
-    const { data: existingUser, error: fetchError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', supabaseUser.id)
-      .single()
-
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error('Error fetching user profile:', fetchError)
-      return null
-    }
-
-    if (existingUser) {
-      return {
-        id: existingUser.user_id,
-        email: existingUser.email,
-        name: existingUser.name,
-        created_at: existingUser.created_at
-      }
-    }
-
-    // Create new user profile
-    const { data: newUser, error: insertError } = await supabase
-      .from('user_profiles')
-      .insert({
-        user_id: supabaseUser.id,
-        email: supabaseUser.email,
-        name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User'
-      })
-      .select()
-      .single()
-
-    if (insertError) {
-      console.error('Error creating user profile:', insertError)
-      return null
-    }
-
-    return {
-      id: newUser.user_id,
-      email: newUser.email,
-      name: newUser.name,
-      created_at: newUser.created_at
-    }
-  } catch (error) {
-    console.error('Error in createOrGetUserProfile:', error)
     return null
   }
 }
@@ -176,8 +124,13 @@ export const getCurrentUser = async (): Promise<User | null> => {
       return DEMO_USER
     }
 
-    // For real users, get their profile
-    return await createOrGetUserProfile(user)
+    // For real users, create user object from auth data
+    return {
+      id: user.id,
+      email: user.email || '',
+      name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+      created_at: user.created_at
+    }
   } catch (error) {
     console.error('Error getting current user:', error)
     return null
