@@ -110,9 +110,23 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
       .eq('id', supabaseUser.id)
       .single()
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error('createOrGetUserProfile: Error fetching user profile:', fetchError)
-      return null
+    if (fetchError) {
+      console.error('createOrGetUserProfile: Error fetching user profile:', fetchError);
+      
+      // If the table doesn't exist, create a fallback user object
+      if (fetchError.code === '42P01') {
+        console.log('createOrGetUserProfile: Users table does not exist, creating fallback user');
+        return {
+          id: supabaseUser.id,
+          email: supabaseUser.email || '',
+          name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
+          created_at: supabaseUser.created_at
+        };
+      }
+      
+      if (fetchError.code !== 'PGRST116') {
+        return null;
+      }
     }
 
     if (existingUser) {
@@ -138,8 +152,20 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
       .single()
 
     if (insertError) {
-      console.error('createOrGetUserProfile: Error creating user profile:', insertError)
-      return null
+      console.error('createOrGetUserProfile: Error creating user profile:', insertError);
+      
+      // If the table doesn't exist, create a fallback user object
+      if (insertError.code === '42P01') {
+        console.log('createOrGetUserProfile: Users table does not exist, creating fallback user');
+        return {
+          id: supabaseUser.id,
+          email: supabaseUser.email || '',
+          name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
+          created_at: supabaseUser.created_at
+        };
+      }
+      
+      return null;
     }
 
     console.log('createOrGetUserProfile: Created new user:', newUser.name);
@@ -150,8 +176,16 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
       created_at: newUser.created_at
     }
   } catch (error) {
-    console.error('createOrGetUserProfile: Error in createOrGetUserProfile:', error)
-    return null
+    console.error('createOrGetUserProfile: Error in createOrGetUserProfile:', error);
+    
+    // Fallback: create user object from auth data
+    console.log('createOrGetUserProfile: Creating fallback user from auth data');
+    return {
+      id: supabaseUser.id,
+      email: supabaseUser.email || '',
+      name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
+      created_at: supabaseUser.created_at
+    };
   }
 }
 
