@@ -120,43 +120,59 @@ export const logoutUser = async (): Promise<void> => {
 
 export const getCurrentUser = async (): Promise<User | null> => {
   console.log('getCurrentUser: Starting current user check');
-  try {
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      console.log('getCurrentUser: No auth user found, checking localStorage');
-      // Check for demo user in localStorage
-      if (typeof window !== 'undefined') {
-        const storedUser = localStorage.getItem('demo-user')
-        if (storedUser) {
-          console.log('getCurrentUser: Found demo user in localStorage');
-          return JSON.parse(storedUser)
+  
+  // Add timeout to prevent infinite hanging
+  const timeoutPromise = new Promise<null>((resolve) => {
+    setTimeout(() => {
+      console.error('getCurrentUser: Timeout reached, returning null');
+      resolve(null);
+    }, 5000); // 5 second timeout
+  });
+
+  const getUserPromise = async (): Promise<User | null> => {
+    try {
+      console.log('getCurrentUser: Calling supabase.auth.getUser()');
+      const { data: { user } } = await supabase.auth.getUser()
+      console.log('getCurrentUser: supabase.auth.getUser() completed, user:', user?.email);
+      
+      if (!user) {
+        console.log('getCurrentUser: No auth user found, checking localStorage');
+        // Check for demo user in localStorage
+        if (typeof window !== 'undefined') {
+          const storedUser = localStorage.getItem('demo-user')
+          if (storedUser) {
+            console.log('getCurrentUser: Found demo user in localStorage');
+            return JSON.parse(storedUser)
+          }
         }
+        console.log('getCurrentUser: No user found');
+        return null
       }
-      console.log('getCurrentUser: No user found');
+
+      console.log('getCurrentUser: Found auth user:', user.email);
+
+      // Special handling for demo user
+      if (user.email === 'demo@example.com') {
+        console.log('getCurrentUser: Demo user detected');
+        return DEMO_USER
+      }
+
+      // Convert Supabase user to our User interface
+      const userObj: User = {
+        id: user.id,
+        email: user.email || '',
+        name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+        created_at: user.created_at
+      }
+
+      console.log('getCurrentUser: Returning user:', userObj.name);
+      return userObj
+    } catch (error) {
+      console.error('getCurrentUser: Error getting current user:', error)
       return null
     }
+  };
 
-    console.log('getCurrentUser: Found auth user:', user.email);
-
-    // Special handling for demo user
-    if (user.email === 'demo@example.com') {
-      console.log('getCurrentUser: Demo user detected');
-      return DEMO_USER
-    }
-
-    // Convert Supabase user to our User interface
-    const userObj: User = {
-      id: user.id,
-      email: user.email || '',
-      name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-      created_at: user.created_at
-    }
-
-    console.log('getCurrentUser: Returning user:', userObj.name);
-    return userObj
-  } catch (error) {
-    console.error('getCurrentUser: Error getting current user:', error)
-    return null
-  }
+  // Race between the actual function and the timeout
+  return Promise.race([getUserPromise(), timeoutPromise]);
 } 

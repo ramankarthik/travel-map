@@ -49,13 +49,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('AuthContext: Auth state changed:', event, session?.user?.email);
         if (event === 'SIGNED_IN' && session?.user) {
           try {
-            const userProfile = await getCurrentUser();
-            console.log('AuthContext: User profile after sign in:', userProfile);
+            console.log('AuthContext: About to call getCurrentUser with timeout');
+            // Add timeout to getCurrentUser call
+            const userProfile = await Promise.race([
+              getCurrentUser(),
+              new Promise<null>((resolve) => {
+                setTimeout(() => {
+                  console.error('AuthContext: getCurrentUser timeout, using session user');
+                  resolve(null);
+                }, 3000);
+              })
+            ]);
+            
+            console.log('AuthContext: getCurrentUser result:', userProfile);
             if (userProfile) {
               setUser(userProfile);
+            } else {
+              // Fallback: create user from session data
+              console.log('AuthContext: Creating fallback user from session');
+              const fallbackUser: User = {
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+                created_at: session.user.created_at
+              };
+              setUser(fallbackUser);
             }
           } catch (error) {
             console.error('AuthContext: Error getting user profile after sign in:', error);
+            // Fallback: create user from session data
+            const fallbackUser: User = {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+              created_at: session.user.created_at
+            };
+            setUser(fallbackUser);
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('AuthContext: User signed out');
