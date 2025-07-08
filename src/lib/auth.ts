@@ -24,6 +24,7 @@ const DEMO_USER: User = {
 }
 
 export const loginUser = async (email: string, password: string): Promise<User | null> => {
+  console.log('loginUser: Starting login for:', email);
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -31,17 +32,20 @@ export const loginUser = async (email: string, password: string): Promise<User |
     })
 
     if (error) {
-      console.error('Login error:', error.message)
+      console.error('loginUser: Login error:', error.message)
       return null
     }
 
     if (!data.user) {
-      console.error('No user data returned')
+      console.error('loginUser: No user data returned')
       return null
     }
 
+    console.log('loginUser: Auth successful for:', data.user.email);
+
     // Special handling for demo user
     if (data.user.email === 'demo@example.com') {
+      console.log('loginUser: Demo user detected, returning demo user');
       // Store demo user in localStorage for persistence
       if (typeof window !== 'undefined') {
         localStorage.setItem('demo-user', JSON.stringify(DEMO_USER))
@@ -50,15 +54,18 @@ export const loginUser = async (email: string, password: string): Promise<User |
     }
 
     // For real users, get their profile
+    console.log('loginUser: Getting user profile for real user');
     const userProfile = await createOrGetUserProfile(data.user)
+    console.log('loginUser: User profile result:', userProfile);
     return userProfile
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('loginUser: Login error:', error)
     return null
   }
 }
 
 export const signUpUser = async (email: string, password: string, name: string): Promise<User | null> => {
+  console.log('signUpUser: Starting signup for:', email);
   try {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -71,27 +78,31 @@ export const signUpUser = async (email: string, password: string, name: string):
     })
 
     if (error) {
-      console.error('Signup error:', error.message)
+      console.error('signUpUser: Signup error:', error.message)
       return null
     }
 
     if (!data.user) {
-      console.error('No user data returned from signup')
+      console.error('signUpUser: No user data returned from signup')
       return null
     }
 
+    console.log('signUpUser: Auth signup successful, creating profile');
     // Create user profile
     const userProfile = await createOrGetUserProfile(data.user)
+    console.log('signUpUser: User profile created:', userProfile);
     return userProfile
   } catch (error) {
-    console.error('Signup error:', error)
+    console.error('signUpUser: Signup error:', error)
     return null
   }
 }
 
 export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | null> => {
+  console.log('createOrGetUserProfile: Starting for user:', supabaseUser.id);
   try {
     // Check if user profile already exists
+    console.log('createOrGetUserProfile: Checking if user exists in users table');
     const { data: existingUser, error: fetchError } = await supabase
       .from('users')
       .select('*')
@@ -99,11 +110,12 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
       .single()
 
     if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error('Error fetching user profile:', fetchError)
+      console.error('createOrGetUserProfile: Error fetching user profile:', fetchError)
       return null
     }
 
     if (existingUser) {
+      console.log('createOrGetUserProfile: Found existing user:', existingUser.name);
       return {
         id: existingUser.id,
         email: existingUser.email,
@@ -113,6 +125,7 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
     }
 
     // Create new user profile
+    console.log('createOrGetUserProfile: Creating new user profile');
     const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
@@ -124,10 +137,11 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
       .single()
 
     if (insertError) {
-      console.error('Error creating user profile:', insertError)
+      console.error('createOrGetUserProfile: Error creating user profile:', insertError)
       return null
     }
 
+    console.log('createOrGetUserProfile: Created new user:', newUser.name);
     return {
       id: newUser.id,
       email: newUser.email,
@@ -135,12 +149,13 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
       created_at: newUser.created_at
     }
   } catch (error) {
-    console.error('Error in createOrGetUserProfile:', error)
+    console.error('createOrGetUserProfile: Error in createOrGetUserProfile:', error)
     return null
   }
 }
 
 export const logoutUser = async (): Promise<void> => {
+  console.log('logoutUser: Starting logout');
   try {
     // Clear demo user from localStorage
     if (typeof window !== 'undefined') {
@@ -150,35 +165,44 @@ export const logoutUser = async (): Promise<void> => {
 
     // Sign out from Supabase
     await supabase.auth.signOut()
+    console.log('logoutUser: Logout successful');
   } catch (error) {
-    console.error('Logout error:', error)
+    console.error('logoutUser: Logout error:', error)
   }
 }
 
 export const getCurrentUser = async (): Promise<User | null> => {
+  console.log('getCurrentUser: Starting current user check');
   try {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
+      console.log('getCurrentUser: No auth user found, checking localStorage');
       // Check for demo user in localStorage
       if (typeof window !== 'undefined') {
         const storedUser = localStorage.getItem('demo-user')
         if (storedUser) {
+          console.log('getCurrentUser: Found demo user in localStorage');
           return JSON.parse(storedUser)
         }
       }
+      console.log('getCurrentUser: No user found');
       return null
     }
 
+    console.log('getCurrentUser: Found auth user:', user.email);
+
     // Special handling for demo user
     if (user.email === 'demo@example.com') {
+      console.log('getCurrentUser: Demo user detected');
       return DEMO_USER
     }
 
     // For real users, get their profile
+    console.log('getCurrentUser: Getting profile for real user');
     return await createOrGetUserProfile(user)
   } catch (error) {
-    console.error('Error getting current user:', error)
+    console.error('getCurrentUser: Error getting current user:', error)
     return null
   }
 } 
