@@ -25,6 +25,17 @@ const DEMO_USER: User = {
 
 export const loginUser = async (email: string, password: string): Promise<User | null> => {
   console.log('loginUser: Starting login for:', email);
+  
+  // Special handling for demo user - bypass Supabase auth
+  if (email === 'demo@example.com' && password === 'demo123') {
+    console.log('loginUser: Demo user detected, bypassing Supabase auth');
+    // Store demo user in localStorage for persistence
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('demo-user', JSON.stringify(DEMO_USER))
+    }
+    return DEMO_USER
+  }
+  
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -42,16 +53,6 @@ export const loginUser = async (email: string, password: string): Promise<User |
     }
 
     console.log('loginUser: Auth successful for:', data.user.email);
-
-    // Special handling for demo user
-    if (data.user.email === 'demo@example.com') {
-      console.log('loginUser: Demo user detected, returning demo user');
-      // Store demo user in localStorage for persistence
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('demo-user', JSON.stringify(DEMO_USER))
-      }
-      return DEMO_USER
-    }
 
     // For real users, get their profile
     console.log('loginUser: Getting user profile for real user');
