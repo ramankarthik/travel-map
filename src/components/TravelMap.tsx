@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface Destination {
   id: string;
@@ -23,224 +23,147 @@ interface TravelMapProps {
   onMarkerClick: (destination: Destination) => void;
 }
 
-// Google Maps API key - you'll need to add this to your environment variables
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-
-// Debug: Log API key info (without exposing the full key)
-console.log('TravelMap: Environment check - API key exists:', !!GOOGLE_MAPS_API_KEY);
-console.log('TravelMap: Environment check - API key starts with:', GOOGLE_MAPS_API_KEY.substring(0, 10) + '...');
-
 export const TravelMap: React.FC<TravelMapProps> = ({ 
   className = '', 
   destinations, 
   onMarkerClick
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
-  const [componentMounted, setComponentMounted] = useState(false);
+  const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+  const [isClient, setIsClient] = useState(false);
 
-  // Add timeout to prevent infinite loading
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (isLoading) {
-        console.log('TravelMap: Loading timeout reached');
-        setError('Map loading timed out. Please check your internet connection and API key.');
-        setIsLoading(false);
-      }
-    }, 10000); // 10 second timeout
-
-    setLoadingTimeout(timeout);
-
-    return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [isLoading]);
-
-  // Load Google Maps API
-  useEffect(() => {
-    console.log('TravelMap: Starting Google Maps initialization');
-    console.log('TravelMap: API Key exists:', !!GOOGLE_MAPS_API_KEY);
-    console.log('TravelMap: API Key length:', GOOGLE_MAPS_API_KEY.length);
-    
-    if (!GOOGLE_MAPS_API_KEY) {
-      console.log('TravelMap: No API key found');
-      setError('Google Maps API key not configured');
-      setIsLoading(false);
-      return;
-    }
-
-    // Check if Google Maps is already loaded
-    if (window.google && window.google.maps) {
-      console.log('TravelMap: Google Maps already loaded, initializing map');
-      initializeMap();
-      return;
-    }
-
-    console.log('TravelMap: Loading Google Maps API script');
-    // Load Google Maps API
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      console.log('TravelMap: Google Maps script loaded successfully');
-      console.log('TravelMap: window.google exists after load:', !!window.google);
-      console.log('TravelMap: window.google.maps exists after load:', !!(window.google && window.google.maps));
-      setGoogleMapsLoaded(true);
-      // Don't call initializeMap here, let the useEffect handle it
-    };
-    script.onerror = (error) => {
-      console.error('TravelMap: Failed to load Google Maps script:', error);
-      setError('Failed to load Google Maps');
-      setIsLoading(false);
-    };
-    document.head.appendChild(script);
-
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
-      }
-    };
+    setIsClient(true);
   }, []);
 
-  const initializeMap = useCallback(() => {
-    console.log('TravelMap: initializeMap called');
-    console.log('TravelMap: mapRef.current exists:', !!mapRef.current);
-    console.log('TravelMap: window.google exists:', !!window.google);
-    console.log('TravelMap: window.google.maps exists:', !!(window.google && window.google.maps));
-    
-    if (!mapRef.current) {
-      console.log('TravelMap: mapRef.current is null, retrying in 100ms');
-      // Retry after a short delay to allow DOM to render
-      setTimeout(() => {
-        if (mapRef.current) {
-          console.log('TravelMap: mapRef.current now exists, initializing map');
-          initializeMap();
-        } else {
-          console.log('TravelMap: mapRef.current still null after retry');
-          setError('Failed to initialize map container');
-          setIsLoading(false);
-        }
-      }, 100);
-      return;
-    }
-    
-    if (!window.google) {
-      console.log('TravelMap: window.google is not available');
-      return;
-    }
-
-    try {
-      console.log('TravelMap: Creating Google Maps instance');
-      const map = new google.maps.Map(mapRef.current, {
-        center: { lat: 20, lng: 0 },
-        zoom: 2,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
-        mapTypeControl: true,
-        streetViewControl: false,
-        fullscreenControl: true,
-        zoomControl: true,
-        gestureHandling: 'cooperative'
-      });
-
-      console.log('TravelMap: Map created successfully');
-      mapInstanceRef.current = map;
-      setIsLoading(false);
-      // Clear the loading timeout
-      if (loadingTimeout) {
-        clearTimeout(loadingTimeout);
-        setLoadingTimeout(null);
-      }
-    } catch (err) {
-      console.error('TravelMap: Error creating map:', err);
-      setError('Failed to initialize map');
-      setIsLoading(false);
-    }
-  }, [loadingTimeout]);
-
-  // Wait for container to be ready before initializing map
   useEffect(() => {
-    console.log('TravelMap: useEffect triggered - checking container readiness');
-    console.log('TravelMap: mapRef.current exists:', !!mapRef.current);
-    console.log('TravelMap: googleMapsLoaded:', googleMapsLoaded);
-    console.log('TravelMap: componentMounted:', componentMounted);
-    console.log('TravelMap: mapInstanceRef.current exists:', !!mapInstanceRef.current);
-    console.log('TravelMap: isLoading:', isLoading);
-    
-    const checkAndInitialize = () => {
-      console.log('TravelMap: checkAndInitialize called');
-      console.log('TravelMap: mapRef.current exists:', !!mapRef.current);
-      console.log('TravelMap: googleMapsLoaded:', googleMapsLoaded);
-      console.log('TravelMap: componentMounted:', componentMounted);
-      console.log('TravelMap: mapInstanceRef.current exists:', !!mapInstanceRef.current);
-      console.log('TravelMap: isLoading:', isLoading);
-      
-      if (mapRef.current && googleMapsLoaded && componentMounted && !mapInstanceRef.current && !isLoading) {
-        console.log('TravelMap: Container ready, initializing map');
-        initializeMap();
-      } else {
-        console.log('TravelMap: Container not ready yet');
-        if (!mapRef.current) console.log('TravelMap: - mapRef.current is null');
-        if (!googleMapsLoaded) console.log('TravelMap: - googleMapsLoaded is false');
-        if (!componentMounted) console.log('TravelMap: - componentMounted is false');
-        if (mapInstanceRef.current) console.log('TravelMap: - mapInstanceRef.current exists');
-        if (isLoading) console.log('TravelMap: - isLoading is true');
+    if (!isClient || !mapRef.current || mapInstanceRef.current) return;
+
+    // Dynamically import Leaflet only on client side
+    const initMap = async () => {
+      try {
+        const L = (await import('leaflet')).default;
+
+        // Fix for default markers in Leaflet
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        });
+
+        // Initialize the map
+        if (!mapRef.current) return;
+        const map = L.map(mapRef.current, {
+          minZoom: 1,
+          maxZoom: 18,
+          worldCopyJump: false,
+          maxBounds: [[-90, -180], [90, 180]],
+          maxBoundsViscosity: 1.0,
+          preferCanvas: true,
+          zoomControl: true,
+          attributionControl: true
+        }).setView([20, 0], 2);
+        
+        // Fit to world bounds
+        map.fitWorld({ padding: [20, 20] });
+        
+        // Force a resize to ensure proper dimensions
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 200);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Store map instance
+        mapInstanceRef.current = map;
+        markersRef.current = [];
+      } catch (error) {
+        console.error('Error loading map:', error);
       }
     };
 
-    // Check immediately
-    checkAndInitialize();
-    
-    // Also check after a short delay to ensure everything is ready
-    const timeout = setTimeout(checkAndInitialize, 200);
-    
-    return () => clearTimeout(timeout);
-  }, [isLoading, googleMapsLoaded, componentMounted, initializeMap]);
+    initMap();
+
+    // Cleanup function
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [isClient]);
 
   // Update markers when destinations change
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    if (!mapInstanceRef.current || !isClient) return;
 
+    const L = require('leaflet');
+    
     // Clear existing markers
     markersRef.current.forEach(marker => {
-      marker.setMap(null);
+      mapInstanceRef.current.removeLayer(marker);
     });
     markersRef.current = [];
 
-    // Create new markers
-    destinations.forEach(dest => {
-      const marker = new google.maps.Marker({
-        position: { lat: dest.lat, lng: dest.lng },
-        map: mapInstanceRef.current,
-        title: dest.name,
-        icon: {
-          url: dest.status === 'visited' 
-            ? 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-              <svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="15" cy="15" r="13" fill="#ef4444" stroke="white" stroke-width="2"/>
-                <path d="M12 12m-3.2 0a3.2 3.2 0 1 0 6.4 0a3.2 3.2 0 1 0 -6.4 0" fill="white"/>
-                <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z" fill="white"/>
-              </svg>
-            `)
-            : 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-              <svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="15" cy="15" r="13" fill="#3b82f6" stroke="white" stroke-width="2"/>
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="white"/>
-              </svg>
-            `),
-          scaledSize: new google.maps.Size(30, 30),
-          anchor: new google.maps.Point(15, 15)
-        }
-      });
+    // Create custom icons
+    const redCameraIcon = L.divIcon({
+      html: `
+        <div style="
+          background: #ef4444;
+          border: 2px solid white;
+          border-radius: 50%;
+          width: 30px;
+          height: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        ">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+            <path d="M12 12m-3.2 0a3.2 3.2 0 1 0 6.4 0a3.2 3.2 0 1 0 -6.4 0"/>
+            <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+          </svg>
+        </div>
+      `,
+      className: 'custom-div-icon',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
 
-      // Add info window
-      const infoWindow = new google.maps.InfoWindow({
-        content: `
+    const bluePinIcon = L.divIcon({
+      html: `
+        <div style="
+          background: #3b82f6;
+          border: 2px solid white;
+          border-radius: 50%;
+          width: 30px;
+          height: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        ">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+        </div>
+      `,
+      className: 'custom-div-icon',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
+
+    // Add markers for each destination
+    destinations.forEach(dest => {
+      const icon = dest.status === 'visited' ? redCameraIcon : bluePinIcon;
+      const marker = L.marker([dest.lat, dest.lng], { icon })
+        .addTo(mapInstanceRef.current)
+        .bindPopup(`
           <div class="p-2">
             <h3 class="font-bold text-lg">${dest.name}</h3>
             <p class="text-gray-600">${dest.country}</p>
@@ -252,71 +175,24 @@ export const TravelMap: React.FC<TravelMapProps> = ({
               ${dest.status}
             </span>
           </div>
-        `
-      });
+        `);
 
-      marker.addListener('click', () => {
-        infoWindow.open(mapInstanceRef.current, marker);
+      // Add click event to open modal
+      marker.on('click', () => {
         onMarkerClick(dest);
       });
 
       markersRef.current.push(marker);
     });
 
-    // Fit bounds to show all destinations
-    if (destinations.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      destinations.forEach(dest => {
-        bounds.extend({ lat: dest.lat, lng: dest.lng });
-      });
-      mapInstanceRef.current.fitBounds(bounds);
-    }
-  }, [destinations, onMarkerClick]);
+  }, [destinations, onMarkerClick, isClient]);
 
-  // Check if map container is properly rendered
-  useEffect(() => {
-    console.log('TravelMap: Container rendering useEffect called');
-    if (mapRef.current) {
-      console.log('TravelMap: Map container rendered');
-      console.log('TravelMap: Container dimensions:', {
-        width: mapRef.current.offsetWidth,
-        height: mapRef.current.offsetHeight,
-        clientWidth: mapRef.current.clientWidth,
-        clientHeight: mapRef.current.clientHeight
-      });
-      console.log('TravelMap: Container styles:', window.getComputedStyle(mapRef.current));
-      setComponentMounted(true);
-    } else {
-      console.log('TravelMap: mapRef.current is null in container rendering useEffect');
-      // Retry after a short delay
-      setTimeout(() => {
-        if (mapRef.current) {
-          console.log('TravelMap: Map container now rendered on retry');
-          setComponentMounted(true);
-        }
-      }, 100);
-    }
-  }, []);
-
-  if (error) {
-    return (
-      <div className={`w-full h-full rounded-lg bg-gray-100 flex items-center justify-center ${className}`}>
-        <div className="text-center">
-          <p className="text-red-600 mb-2">{error}</p>
-          <p className="text-sm text-gray-600">Please check your Google Maps API key configuration</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
+  if (!isClient) {
     return (
       <div className={`w-full h-full rounded-lg bg-gray-100 flex items-center justify-center ${className}`}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600 text-sm">Loading map...</p>
-          <p className="mt-1 text-xs text-gray-500">API Key: {GOOGLE_MAPS_API_KEY ? 'Present' : 'Missing'}</p>
-          <p className="mt-1 text-xs text-gray-500">Google Maps: {window.google ? 'Loaded' : 'Not loaded'}</p>
         </div>
       </div>
     );
@@ -327,25 +203,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       ref={mapRef} 
       className={`w-full h-full rounded-lg ${className}`}
       style={{ 
-        height: '100%', 
-        minHeight: '600px',
-        border: '2px solid red', // Temporary border for debugging
-        backgroundColor: '#f0f0f0', // Temporary background for debugging
-        position: 'relative' // Added for debugging
+        height: '100%',
+        width: '100%',
+        minHeight: '600px'
       }}
-    >
-      {/* Temporary debugging text */}
-      <div style={{
-        position: 'absolute',
-        top: '10px',
-        left: '10px',
-        background: 'rgba(255,255,255,0.9)',
-        padding: '5px',
-        fontSize: '12px',
-        zIndex: 1000
-      }}>
-        Map Container - Loading: {isLoading.toString()}, Error: {error || 'none'}
-      </div>
-    </div>
+    />
   );
 }; 
