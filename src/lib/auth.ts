@@ -7,14 +7,6 @@ export interface User {
   created_at: string
 }
 
-export interface UserProfile {
-  id: string
-  email: string
-  name: string
-  created_at: string
-  updated_at: string
-}
-
 // Demo user data for testing
 const DEMO_USER: User = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -54,11 +46,15 @@ export const loginUser = async (email: string, password: string): Promise<User |
 
     console.log('loginUser: Auth successful for:', data.user.email);
 
-    // For real users, get their profile
-    console.log('loginUser: Getting user profile for real user');
-    const userProfile = await createOrGetUserProfile(data.user)
-    console.log('loginUser: User profile result:', userProfile);
-    return userProfile
+    // Convert Supabase user to our User interface
+    const user: User = {
+      id: data.user.id,
+      email: data.user.email || '',
+      name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+      created_at: data.user.created_at
+    }
+
+    return user
   } catch (error) {
     console.error('loginUser: Login error:', error)
     return null
@@ -88,148 +84,20 @@ export const signUpUser = async (email: string, password: string, name: string):
       return null
     }
 
-    console.log('signUpUser: Auth signup successful, creating profile');
-    // Create user profile
-    const userProfile = await createOrGetUserProfile(data.user)
-    console.log('signUpUser: User profile created:', userProfile);
-    return userProfile
+    console.log('signUpUser: Auth signup successful');
+
+    // Convert Supabase user to our User interface
+    const user: User = {
+      id: data.user.id,
+      email: data.user.email || '',
+      name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+      created_at: data.user.created_at
+    }
+
+    return user
   } catch (error) {
     console.error('signUpUser: Signup error:', error)
     return null
-  }
-}
-
-export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | null> => {
-  console.log('createOrGetUserProfile: Starting for user:', supabaseUser.id);
-  try {
-    // Check if user profile already exists
-    console.log('createOrGetUserProfile: About to query users table');
-    const { data: existingUser, error: fetchError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', supabaseUser.id)
-      .single()
-    console.log('createOrGetUserProfile: Query completed, result:', { existingUser: !!existingUser, fetchError: !!fetchError });
-
-    console.log('createOrGetUserProfile: Fetch result:', { existingUser, fetchError });
-
-    if (fetchError) {
-      console.error('createOrGetUserProfile: Error fetching user profile:', fetchError);
-      console.error('createOrGetUserProfile: Error code:', fetchError.code);
-      console.error('createOrGetUserProfile: Error message:', fetchError.message);
-      
-      // If the table doesn't exist, create a fallback user object
-      if (fetchError.code === '42P01') {
-        console.log('createOrGetUserProfile: Users table does not exist, creating fallback user');
-        return {
-          id: supabaseUser.id,
-          email: supabaseUser.email || '',
-          name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
-          created_at: supabaseUser.created_at
-        };
-      }
-      
-      // If it's a "not found" error, that's normal for new users
-      if (fetchError.code === 'PGRST116') {
-        console.log('createOrGetUserProfile: User not found in table, will create new profile');
-      } else {
-        console.log('createOrGetUserProfile: Unknown error, creating fallback user');
-        return {
-          id: supabaseUser.id,
-          email: supabaseUser.email || '',
-          name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
-          created_at: supabaseUser.created_at
-        };
-      }
-    }
-
-    if (existingUser) {
-      console.log('createOrGetUserProfile: Found existing user:', existingUser.name);
-      return {
-        id: existingUser.id,
-        email: existingUser.email,
-        name: existingUser.name,
-        created_at: existingUser.created_at
-      }
-    }
-
-    // Create new user profile
-    console.log('createOrGetUserProfile: About to insert new user profile');
-    const { data: newUser, error: insertError } = await supabase
-      .from('users')
-      .insert({
-        id: supabaseUser.id,
-        email: supabaseUser.email,
-        name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User'
-      })
-      .select()
-      .single()
-    console.log('createOrGetUserProfile: Insert completed, result:', { newUser: !!newUser, insertError: !!insertError });
-
-    console.log('createOrGetUserProfile: Insert result:', { newUser, insertError });
-
-    if (insertError) {
-      console.error('createOrGetUserProfile: Error creating user profile:', insertError);
-      console.error('createOrGetUserProfile: Insert error code:', insertError.code);
-      console.error('createOrGetUserProfile: Insert error message:', insertError.message);
-      
-      // If the table doesn't exist, create a fallback user object
-      if (insertError.code === '42P01') {
-        console.log('createOrGetUserProfile: Users table does not exist, creating fallback user');
-        return {
-          id: supabaseUser.id,
-          email: supabaseUser.email || '',
-          name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
-          created_at: supabaseUser.created_at
-        };
-      }
-      
-      // If it's a duplicate key error, try to fetch the existing user
-      if (insertError.code === '23505') {
-        console.log('createOrGetUserProfile: Duplicate key error, fetching existing user');
-        const { data: existingUser, error: fetchError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', supabaseUser.id)
-          .single()
-        
-        if (existingUser) {
-          return {
-            id: existingUser.id,
-            email: existingUser.email,
-            name: existingUser.name,
-            created_at: existingUser.created_at
-          }
-        }
-      }
-      
-      console.log('createOrGetUserProfile: Creating fallback user due to insert error');
-      return {
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
-        created_at: supabaseUser.created_at
-      };
-    }
-
-    console.log('createOrGetUserProfile: Created new user:', newUser.name);
-    return {
-      id: newUser.id,
-      email: newUser.email,
-      name: newUser.name,
-      created_at: newUser.created_at
-    }
-  } catch (error) {
-    console.error('createOrGetUserProfile: Error in createOrGetUserProfile:', error);
-    
-    // Fallback: create user object from auth data
-    console.log('createOrGetUserProfile: Creating fallback user from auth data');
-    return {
-      id: supabaseUser.id,
-      email: supabaseUser.email || '',
-      name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
-      created_at: supabaseUser.created_at
-    };
   }
 }
 
@@ -253,9 +121,7 @@ export const logoutUser = async (): Promise<void> => {
 export const getCurrentUser = async (): Promise<User | null> => {
   console.log('getCurrentUser: Starting current user check');
   try {
-    console.log('getCurrentUser: Calling supabase.auth.getUser()');
     const { data: { user } } = await supabase.auth.getUser()
-    console.log('getCurrentUser: supabase.auth.getUser() completed, user:', user?.email);
     
     if (!user) {
       console.log('getCurrentUser: No auth user found, checking localStorage');
@@ -279,11 +145,16 @@ export const getCurrentUser = async (): Promise<User | null> => {
       return DEMO_USER
     }
 
-    // For real users, get their profile
-    console.log('getCurrentUser: About to call createOrGetUserProfile for real user');
-    const profile = await createOrGetUserProfile(user)
-    console.log('getCurrentUser: createOrGetUserProfile completed, profile:', profile?.name);
-    return profile
+    // Convert Supabase user to our User interface
+    const userObj: User = {
+      id: user.id,
+      email: user.email || '',
+      name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+      created_at: user.created_at
+    }
+
+    console.log('getCurrentUser: Returning user:', userObj.name);
+    return userObj
   } catch (error) {
     console.error('getCurrentUser: Error getting current user:', error)
     return null
