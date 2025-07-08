@@ -42,6 +42,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
   const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
+  const [componentMounted, setComponentMounted] = useState(false);
 
   // Add timeout to prevent infinite loading
   useEffect(() => {
@@ -167,6 +168,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     console.log('TravelMap: useEffect triggered - checking container readiness');
     console.log('TravelMap: mapRef.current exists:', !!mapRef.current);
     console.log('TravelMap: googleMapsLoaded:', googleMapsLoaded);
+    console.log('TravelMap: componentMounted:', componentMounted);
     console.log('TravelMap: mapInstanceRef.current exists:', !!mapInstanceRef.current);
     console.log('TravelMap: isLoading:', isLoading);
     
@@ -174,16 +176,18 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       console.log('TravelMap: checkAndInitialize called');
       console.log('TravelMap: mapRef.current exists:', !!mapRef.current);
       console.log('TravelMap: googleMapsLoaded:', googleMapsLoaded);
+      console.log('TravelMap: componentMounted:', componentMounted);
       console.log('TravelMap: mapInstanceRef.current exists:', !!mapInstanceRef.current);
       console.log('TravelMap: isLoading:', isLoading);
       
-      if (mapRef.current && googleMapsLoaded && !mapInstanceRef.current && !isLoading) {
+      if (mapRef.current && googleMapsLoaded && componentMounted && !mapInstanceRef.current && !isLoading) {
         console.log('TravelMap: Container ready, initializing map');
         initializeMap();
       } else {
         console.log('TravelMap: Container not ready yet');
         if (!mapRef.current) console.log('TravelMap: - mapRef.current is null');
         if (!googleMapsLoaded) console.log('TravelMap: - googleMapsLoaded is false');
+        if (!componentMounted) console.log('TravelMap: - componentMounted is false');
         if (mapInstanceRef.current) console.log('TravelMap: - mapInstanceRef.current exists');
         if (isLoading) console.log('TravelMap: - isLoading is true');
       }
@@ -196,7 +200,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     const timeout = setTimeout(checkAndInitialize, 200);
     
     return () => clearTimeout(timeout);
-  }, [isLoading, googleMapsLoaded, initializeMap]);
+  }, [isLoading, googleMapsLoaded, componentMounted, initializeMap]);
 
   // Update markers when destinations change
   useEffect(() => {
@@ -281,8 +285,16 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         clientHeight: mapRef.current.clientHeight
       });
       console.log('TravelMap: Container styles:', window.getComputedStyle(mapRef.current));
+      setComponentMounted(true);
     } else {
       console.log('TravelMap: mapRef.current is null in container rendering useEffect');
+      // Retry after a short delay
+      setTimeout(() => {
+        if (mapRef.current) {
+          console.log('TravelMap: Map container now rendered on retry');
+          setComponentMounted(true);
+        }
+      }, 100);
     }
   }, []);
 
