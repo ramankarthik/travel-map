@@ -110,8 +110,12 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
       .eq('id', supabaseUser.id)
       .single()
 
+    console.log('createOrGetUserProfile: Fetch result:', { existingUser, fetchError });
+
     if (fetchError) {
       console.error('createOrGetUserProfile: Error fetching user profile:', fetchError);
+      console.error('createOrGetUserProfile: Error code:', fetchError.code);
+      console.error('createOrGetUserProfile: Error message:', fetchError.message);
       
       // If the table doesn't exist, create a fallback user object
       if (fetchError.code === '42P01') {
@@ -124,8 +128,17 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
         };
       }
       
-      if (fetchError.code !== 'PGRST116') {
-        return null;
+      // If it's a "not found" error, that's normal for new users
+      if (fetchError.code === 'PGRST116') {
+        console.log('createOrGetUserProfile: User not found in table, will create new profile');
+      } else {
+        console.log('createOrGetUserProfile: Unknown error, creating fallback user');
+        return {
+          id: supabaseUser.id,
+          email: supabaseUser.email || '',
+          name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
+          created_at: supabaseUser.created_at
+        };
       }
     }
 
@@ -151,8 +164,12 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
       .select()
       .single()
 
+    console.log('createOrGetUserProfile: Insert result:', { newUser, insertError });
+
     if (insertError) {
       console.error('createOrGetUserProfile: Error creating user profile:', insertError);
+      console.error('createOrGetUserProfile: Insert error code:', insertError.code);
+      console.error('createOrGetUserProfile: Insert error message:', insertError.message);
       
       // If the table doesn't exist, create a fallback user object
       if (insertError.code === '42P01') {
@@ -165,7 +182,32 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
         };
       }
       
-      return null;
+      // If it's a duplicate key error, try to fetch the existing user
+      if (insertError.code === '23505') {
+        console.log('createOrGetUserProfile: Duplicate key error, fetching existing user');
+        const { data: existingUser, error: fetchError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .single()
+        
+        if (existingUser) {
+          return {
+            id: existingUser.id,
+            email: existingUser.email,
+            name: existingUser.name,
+            created_at: existingUser.created_at
+          }
+        }
+      }
+      
+      console.log('createOrGetUserProfile: Creating fallback user due to insert error');
+      return {
+        id: supabaseUser.id,
+        email: supabaseUser.email || '',
+        name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
+        created_at: supabaseUser.created_at
+      };
     }
 
     console.log('createOrGetUserProfile: Created new user:', newUser.name);
