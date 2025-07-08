@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { signUpUser } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,11 +25,13 @@ export const LoginPage: React.FC = () => {
 
     try {
       if (isSignUp) {
-        // For now, just use the login function for both signup and login
-        // In a real app, you'd have separate signup logic
-        const success = await login(email, password);
-        if (!success) {
-          setError('Failed to create account. Please try again.');
+        // Use real sign-up logic
+        const user = await signUpUser(email, password, name);
+        if (!user) {
+          setError('Failed to create account. Please check your email and password, or try a different email.');
+        } else {
+          // Optionally, auto-login after sign-up
+          await login(email, password);
         }
       } else {
         const success = await login(email, password);
