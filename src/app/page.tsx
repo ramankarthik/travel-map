@@ -11,12 +11,15 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, MapPin, Camera, Globe } from 'lucide-react';
 import { DestinationsService, type Destination, type CreateDestinationData, type UpdateDestinationData } from '@/lib/destinations';
 
+type FilterType = 'all' | 'visited' | 'wishlist';
+
 export default function HomePage() {
   const { user, isLoading } = useAuth();
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalDestination, setModalDestination] = useState<Destination | null>(null);
   const [isNewDestination, setIsNewDestination] = useState(false);
+  const [filter, setFilter] = useState<FilterType>('all');
 
   // Load destinations when user changes
   useEffect(() => {
@@ -82,9 +85,6 @@ export default function HomePage() {
 
   // Calculate stats
   const stats = {
-    totalDestinations: destinations.length,
-    visitedDestinations: destinations.filter(d => d.status === 'visited').length,
-    wishlistDestinations: destinations.filter(d => d.status === 'wishlist').length,
     visitedCountries: new Set(destinations.filter(d => d.status === 'visited').map(d => d.country)).size,
     visitedContinents: new Set(destinations.filter(d => d.status === 'visited').map(d => {
       // Simple continent mapping - you might want to use a proper library
@@ -109,8 +109,13 @@ export default function HomePage() {
       };
       return continentMap[d.country] || 'Other';
     })).size,
-    totalPhotos: destinations.reduce((sum, dest) => sum + (dest.photos?.length || 0), 0),
   };
+
+  // Filter destinations based on current filter
+  const filteredDestinations = destinations.filter(destination => {
+    if (filter === 'all') return true;
+    return destination.status === filter;
+  });
 
   if (isLoading) {
     return (
@@ -143,28 +148,12 @@ export default function HomePage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Travel Stats</h2>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Total Destinations</span>
-                <Badge variant="secondary">{stats.totalDestinations}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Visited</span>
-                <Badge variant="destructive">{stats.visitedDestinations}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Wishlist</span>
-                <Badge variant="default">{stats.wishlistDestinations}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Countries</span>
+                <span className="text-sm text-gray-600">Countries visited</span>
                 <Badge variant="outline">{stats.visitedCountries}</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Continents</span>
+                <span className="text-sm text-gray-600">Continents visited</span>
                 <Badge variant="outline">{stats.visitedContinents}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Photos</span>
-                <Badge variant="outline">{stats.totalPhotos}</Badge>
               </div>
             </div>
           </div>
@@ -178,9 +167,34 @@ export default function HomePage() {
                 Add
               </Button>
             </div>
+
+            {/* Filter Buttons */}
+            <div className="flex gap-2 mb-4">
+              <Button
+                variant={filter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('all')}
+              >
+                All
+              </Button>
+              <Button
+                variant={filter === 'visited' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('visited')}
+              >
+                Visited
+              </Button>
+              <Button
+                variant={filter === 'wishlist' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('wishlist')}
+              >
+                Wishlist
+              </Button>
+            </div>
             
             <div className="space-y-3">
-              {destinations.map((destination) => (
+              {filteredDestinations.map((destination) => (
                 <Card key={destination.id} className="cursor-pointer hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
@@ -228,10 +242,10 @@ export default function HomePage() {
                 </Card>
               ))}
               
-              {destinations.length === 0 && (
+              {filteredDestinations.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <Globe className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>No destinations yet</p>
+                  <p>No destinations {filter !== 'all' ? `in ${filter}` : ''}</p>
                   <p className="text-sm">Add your first destination to get started!</p>
                 </div>
               )}
