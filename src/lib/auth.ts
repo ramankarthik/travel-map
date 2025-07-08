@@ -103,12 +103,13 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
   console.log('createOrGetUserProfile: Starting for user:', supabaseUser.id);
   try {
     // Check if user profile already exists
-    console.log('createOrGetUserProfile: Checking if user exists in users table');
+    console.log('createOrGetUserProfile: About to query users table');
     const { data: existingUser, error: fetchError } = await supabase
       .from('users')
       .select('*')
       .eq('id', supabaseUser.id)
       .single()
+    console.log('createOrGetUserProfile: Query completed, result:', { existingUser: !!existingUser, fetchError: !!fetchError });
 
     console.log('createOrGetUserProfile: Fetch result:', { existingUser, fetchError });
 
@@ -153,7 +154,7 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
     }
 
     // Create new user profile
-    console.log('createOrGetUserProfile: Creating new user profile');
+    console.log('createOrGetUserProfile: About to insert new user profile');
     const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
@@ -163,6 +164,7 @@ export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | 
       })
       .select()
       .single()
+    console.log('createOrGetUserProfile: Insert completed, result:', { newUser: !!newUser, insertError: !!insertError });
 
     console.log('createOrGetUserProfile: Insert result:', { newUser, insertError });
 
@@ -251,7 +253,9 @@ export const logoutUser = async (): Promise<void> => {
 export const getCurrentUser = async (): Promise<User | null> => {
   console.log('getCurrentUser: Starting current user check');
   try {
+    console.log('getCurrentUser: Calling supabase.auth.getUser()');
     const { data: { user } } = await supabase.auth.getUser()
+    console.log('getCurrentUser: supabase.auth.getUser() completed, user:', user?.email);
     
     if (!user) {
       console.log('getCurrentUser: No auth user found, checking localStorage');
@@ -276,8 +280,10 @@ export const getCurrentUser = async (): Promise<User | null> => {
     }
 
     // For real users, get their profile
-    console.log('getCurrentUser: Getting profile for real user');
-    return await createOrGetUserProfile(user)
+    console.log('getCurrentUser: About to call createOrGetUserProfile for real user');
+    const profile = await createOrGetUserProfile(user)
+    console.log('getCurrentUser: createOrGetUserProfile completed, profile:', profile?.name);
+    return profile
   } catch (error) {
     console.error('getCurrentUser: Error getting current user:', error)
     return null
