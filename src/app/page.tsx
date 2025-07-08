@@ -8,13 +8,13 @@ import { DestinationModal } from '@/components/DestinationModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, MapPin, Camera, Globe } from 'lucide-react';
+import { Plus, MapPin, Camera, Globe, LogOut } from 'lucide-react';
 import { DestinationsService, type Destination, type CreateDestinationData, type UpdateDestinationData } from '@/lib/destinations';
 
 type FilterType = 'all' | 'visited' | 'wishlist';
 
 export default function HomePage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalDestination, setModalDestination] = useState<Destination | null>(null);
@@ -67,6 +67,12 @@ export default function HomePage() {
     setIsModalOpen(true);
   };
 
+  const handleCardClick = (destination: Destination) => {
+    setModalDestination(destination);
+    setIsNewDestination(false);
+    setIsModalOpen(true);
+  };
+
   const handleAddNew = () => {
     setModalDestination(null);
     setIsNewDestination(true);
@@ -81,6 +87,10 @@ export default function HomePage() {
 
   const handleDelete = (destinationId: string) => {
     setDestinations(prev => prev.filter(dest => dest.id !== destinationId));
+  };
+
+  const handleLogout = async () => {
+    await logout();
   };
 
   // Calculate stats
@@ -139,21 +149,32 @@ export default function HomePage() {
         <div className="w-80 bg-white shadow-lg flex flex-col">
           {/* Header */}
           <div className="p-6 border-b">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Travel Map</h1>
+            <div className="flex items-center justify-between mb-2">
+              <h1 className="text-2xl font-bold text-gray-900">Travel Map</h1>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </Button>
+            </div>
             <p className="text-gray-600 text-sm">Welcome back, {user.name}!</p>
           </div>
 
           {/* Stats */}
           <div className="p-6 border-b">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Travel Stats</h2>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Countries visited</span>
-                <Badge variant="outline">{stats.visitedCountries}</Badge>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{stats.visitedCountries}</div>
+                <div className="text-sm text-gray-600">Countries visited</div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Continents visited</span>
-                <Badge variant="outline">{stats.visitedContinents}</Badge>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{stats.visitedContinents}</div>
+                <div className="text-sm text-gray-600">Continents visited</div>
               </div>
             </div>
           </div>
@@ -195,7 +216,11 @@ export default function HomePage() {
             
             <div className="space-y-3">
               {filteredDestinations.map((destination) => (
-                <Card key={destination.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                <Card 
+                  key={destination.id} 
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleCardClick(destination)}
+                >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -203,8 +228,12 @@ export default function HomePage() {
                         <p className="text-sm text-gray-600">{destination.country}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <Badge 
-                            variant={destination.status === 'visited' ? 'destructive' : 'default'}
-                            className="text-xs"
+                            variant={destination.status === 'visited' ? 'destructive' : 'secondary'}
+                            className={`text-xs ${
+                              destination.status === 'wishlist' 
+                                ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                                : ''
+                            }`}
                           >
                             {destination.status === 'visited' ? (
                               <>
