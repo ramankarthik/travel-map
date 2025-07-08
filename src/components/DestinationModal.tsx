@@ -1,14 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useState, useEffect, useRef } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Camera, Plus, X, MapPin, Search, Calendar, Trash2, AlertCircle, Upload } from 'lucide-react';
-import type { Destination, CreateDestinationData, UpdateDestinationData } from '@/lib/destinations';
-import { optimizeImage } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Camera, Calendar, MapPin, Search, Trash2, AlertCircle, X } from 'lucide-react';
+import { CreateDestinationData, UpdateDestinationData } from '@/lib/destinations';
+
+interface Destination {
+  id: string;
+  user_id: string;
+  name: string;
+  country: string;
+  lat: number;
+  lng: number;
+  status: 'visited' | 'wishlist';
+  date: string | null;
+  notes: string;
+  photos: string[];
+  created_at: string;
+  updated_at: string;
+}
 
 interface DestinationModalProps {
   destination: Destination | null;
@@ -27,10 +42,7 @@ interface LocationSuggestion {
   displayName: string;
 }
 
-// Photo limit constant
-const MAX_PHOTOS_PER_LOCATION = 3; // Reduced from 5 to save storage
-const MAX_FILE_SIZE_MB = 5; // 5MB max before compression
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const MAX_PHOTOS_PER_LOCATION = 5;
 
 export const DestinationModal: React.FC<DestinationModalProps> = ({
   destination,
@@ -40,31 +52,59 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
   onSave,
   onDelete
 }) => {
-  console.log('🚀 DestinationModal rendered, isOpen:', isOpen, 'isNewDestination:', isNewDestination);
-
-  const [formData, setFormData] = useState<Destination>({
-    id: '',
-    user_id: '',
+  const [formData, setFormData] = useState<Partial<Destination>>({
     name: '',
     country: '',
-    date: '',
-    status: 'wishlist',
-    notes: '',
-    photos: [],
     lat: 0,
     lng: 0,
-    created_at: '',
-    updated_at: '',
+    status: 'wishlist',
+    date: null,
+    notes: '',
+    photos: [] as string[]
   });
 
   const [locationQuery, setLocationQuery] = useState('');
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [error, setError] = useState('');
+  const [showPhotoLimitError, setShowPhotoLimitError] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
-  const [showPhotoLimitError, setShowPhotoLimitError] = useState(false);
-  const [error, setError] = useState('');
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+
+  // Reset form when modal opens/closes or destination changes
+  useEffect(() => {
+    if (isOpen) {
+      if (destination) {
+        setFormData({
+          name: destination.name,
+          country: destination.country,
+          lat: destination.lat,
+          lng: destination.lng,
+          status: destination.status,
+          date: destination.date,
+          notes: destination.notes,
+          photos: destination.photos || []
+        });
+        setLocationQuery(`${destination.name}, ${destination.country}`);
+      } else {
+        setFormData({
+          name: '',
+          country: '',
+          lat: 0,
+          lng: 0,
+          status: 'wishlist',
+          date: null,
+          notes: '',
+          photos: []
+        });
+        setLocationQuery('');
+      }
+      setError('');
+      setShowPhotoLimitError(false);
+    }
+  }, [isOpen, destination]);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -79,49 +119,9 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (isOpen) {
-      if (isNewDestination) {
-        setFormData({
-          id: '',
-          user_id: '',
-          name: '',
-          country: '',
-          date: new Date().toISOString().slice(0, 7), // YYYY-MM format
-          status: 'wishlist',
-          notes: '',
-          photos: [],
-          lat: 0,
-          lng: 0,
-          created_at: '',
-          updated_at: '',
-        });
-        setLocationQuery('');
-      } else if (destination) {
-        // Convert date to YYYY-MM format if it exists
-        let formattedDate = '';
-        if (destination.date) {
-          const date = new Date(destination.date);
-          formattedDate = date.toISOString().slice(0, 7);
-        } else {
-          formattedDate = new Date().toISOString().slice(0, 7);
-        }
-        
-        setFormData({
-          ...destination,
-          date: formattedDate,
-          notes: typeof destination.notes === 'string' 
-            ? destination.notes 
-            : ''
-        });
-        setLocationQuery(destination.name || '');
-      }
-    }
-  }, [isOpen, isNewDestination, destination]);
-
-  // Geocoding function using OpenStreetMap Nominatim API
+  // Search locations using OpenStreetMap Nominatim API
   const searchLocations = async (query: string) => {
-    if (query.length < 3) {
+    if (!query.trim()) {
       setLocationSuggestions([]);
       return;
     }
@@ -132,19 +132,19 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`
       );
       const data = await response.json();
-      
-      const suggestions: LocationSuggestion[] = data.map((item: Record<string, unknown>) => ({
-        name: (item.name as string) || ((item.display_name as string)?.split(',')[0] || ''),
-        country: ((item.address as Record<string, unknown>)?.country as string) || ((item.display_name as string)?.split(',').pop()?.trim() || ''),
-        lat: parseFloat(item.lat as string),
-        lng: parseFloat(item.lon as string),
-        displayName: item.display_name as string
+
+      const suggestions: LocationSuggestion[] = data.map((item: any) => ({
+        name: item.name || item.display_name.split(',')[0],
+        country: item.address?.country || 'Unknown',
+        lat: parseFloat(item.lat),
+        lng: parseFloat(item.lon),
+        displayName: item.display_name
       }));
-      
+
       setLocationSuggestions(suggestions);
     } catch (error) {
       console.error('Error searching locations:', error);
-      setLocationSuggestions([]);
+      setError('Failed to search locations. Please try again.');
     } finally {
       setIsLoadingLocation(false);
     }
@@ -171,7 +171,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
       lat: suggestion.lat,
       lng: suggestion.lng
     }));
-    setLocationQuery(suggestion.displayName);
+    setLocationQuery(`${suggestion.name}, ${suggestion.country}`);
     setShowSuggestions(false);
   };
 
@@ -181,65 +181,61 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files) return;
-
-    console.log('🚀 NEW PHOTO UPLOAD CODE V5 - FIXED DIALOG ISSUES 🚀');
-    console.log('🚀 TIMESTAMP: ' + new Date().toISOString() + ' 🚀');
-    console.log('Photo upload started, files:', files.length);
-    console.log('Current photos count:', formData.photos.length);
-
-    // Check file sizes
-    const oversizedFiles = Array.from(files).filter(file => file.size > MAX_FILE_SIZE_BYTES);
-    if (oversizedFiles.length > 0) {
-      setError(`Files must be smaller than ${MAX_FILE_SIZE_MB}MB. Please resize your images.`);
-      setTimeout(() => setError(''), 5000);
-      return;
-    }
-
-    // Check photo limit
-    if (formData.photos.length + files.length > MAX_PHOTOS_PER_LOCATION) {
-      setShowPhotoLimitError(true);
-      setTimeout(() => setShowPhotoLimitError(false), 3000);
-      return;
-    }
+    if (!files || files.length === 0) return;
 
     setIsUploadingPhoto(true);
+    const newPhotos: string[] = [];
+
     try {
-      const newPhotos: string[] = [];
-      
-      for (const file of Array.from(files)) {
-        console.log('Processing file:', file.name, file.size);
-        // Compress the image
-        const optimizedFile = await optimizeImage(file, 800, 0.6);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         
-        // Convert to base64 for storage (v3 - ensure this is deployed)
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          setError(`File ${file.name} is too large. Maximum size is 5MB.`);
+          continue;
+        }
+
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+          setError(`File ${file.name} is not an image.`);
+          continue;
+        }
+
+        // Convert to base64
         const base64String = await new Promise<string>((resolve) => {
           const reader = new FileReader();
-          reader.onload = () => {
-            resolve(reader.result as string);
-          };
-          reader.readAsDataURL(optimizedFile);
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
         });
-        
-        console.log('Created base64 photo, length:', base64String.length);
+
         newPhotos.push(base64String);
       }
 
-      console.log('Setting new photos:', newPhotos.length);
-      setFormData(prev => ({ 
-        ...prev, 
-        photos: [...prev.photos, ...newPhotos] 
+      // Check photo limit
+      const currentPhotos = formData.photos || [];
+      const totalPhotos = currentPhotos.length + newPhotos.length;
+      if (totalPhotos > MAX_PHOTOS_PER_LOCATION) {
+        setShowPhotoLimitError(true);
+        setTimeout(() => setShowPhotoLimitError(false), 3000);
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        photos: [...(prev.photos || []), ...newPhotos]
       }));
-      
-      // Reset the file input to allow multiple uploads
-      event.target.value = '';
-      
-      console.log('Photo upload completed successfully');
-      
+
+      setError('');
     } catch (error) {
-      console.error('Error processing photos:', error);
+      console.error('Error uploading photos:', error);
+      setError('Failed to upload photos. Please try again.');
     } finally {
       setIsUploadingPhoto(false);
+      // Reset file input
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
@@ -251,49 +247,52 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
   };
 
   const openPhotoModal = (index: number) => {
-    console.log('Opening photo modal for index:', index);
     setSelectedPhotoIndex(index);
+    setIsPhotoModalOpen(true);
   };
 
   const closePhotoModal = () => {
-    console.log('Closing photo modal');
+    setIsPhotoModalOpen(false);
     setSelectedPhotoIndex(null);
   };
 
   const handlePhotoClick = (index: number, event: React.MouseEvent) => {
-    event.preventDefault();
     event.stopPropagation();
-    console.log('Photo clicked:', index);
     openPhotoModal(index);
   };
 
   const handleDeleteClick = (index: number, event: React.MouseEvent) => {
-    event.preventDefault();
     event.stopPropagation();
-    console.log('Delete photo clicked:', index);
     removePhoto(index);
   };
 
   const handleSubmit = () => {
     // Validate required fields
-    if (!formData.name || !formData.country || formData.lat === 0 || formData.lng === 0) {
-      alert('Please select a location from the search results');
+    if (!formData.name?.trim()) {
+      setError('Location name is required');
       return;
     }
 
-    // Prepare the data to save (exclude id and user_id for new destinations)
-    const saveData = {
-      name: formData.name,
-      country: formData.country,
+    if (!formData.country?.trim()) {
+      setError('Country is required');
+      return;
+    }
+
+    if (formData.lat === 0 && formData.lng === 0) {
+      setError('Please select a location from the search results');
+      return;
+    }
+
+    const saveData: CreateDestinationData | UpdateDestinationData = {
+      name: formData.name.trim(),
+      country: formData.country.trim(),
       lat: formData.lat,
       lng: formData.lng,
-      status: formData.status,
+      status: formData.status || 'wishlist',
       date: formData.date,
-      notes: formData.notes,
-      photos: formData.photos
+      notes: formData.notes || '',
+      photos: formData.photos || []
     };
-
-    console.log('Submitting destination data:', saveData);
 
     // Call the save callback
     onSave(saveData);
@@ -315,35 +314,26 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
   const handleFileInputClick = (event: React.MouseEvent) => {
     // Prevent the click from bubbling up to the dialog
     event.stopPropagation();
-    console.log('🚀 File input clicked - preventing dialog close');
   };
 
   const handleUploadButtonClick = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    console.log('🚀 Upload button clicked - triggering file input');
     
     // Find and click the file input
     const fileInput = document.getElementById('photo-upload') as HTMLInputElement;
     if (fileInput) {
-      console.log('🚀 Found file input, clicking it');
       fileInput.click();
-    } else {
-      console.log('🚀 ERROR: Could not find file input');
     }
   };
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => {
-        console.log('Dialog onOpenChange called with:', open, 'isUploadingPhoto:', isUploadingPhoto);
         // Only close if explicitly set to false (user clicked outside or pressed escape)
         // Don't close if user is interacting with form elements or uploading photos
         if (!open && !isUploadingPhoto) {
-          console.log('Closing dialog');
           onClose();
-        } else if (!open && isUploadingPhoto) {
-          console.log('Preventing dialog close during photo upload');
         }
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
@@ -408,7 +398,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
               {formData.lat !== 0 && formData.lng !== 0 && (
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <MapPin className="w-4 h-4" />
-                  <span>Coordinates: {formData.lat.toFixed(4)}, {formData.lng.toFixed(4)}</span>
+                  <span>Coordinates: {(formData.lat || 0).toFixed(4)}, {(formData.lng || 0).toFixed(4)}</span>
                 </div>
               )}
             </div>
@@ -454,7 +444,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
             {/* Photos */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Photos ({formData.photos.length}/{MAX_PHOTOS_PER_LOCATION})</Label>
+                <Label>Photos ({(formData.photos || []).length}/{MAX_PHOTOS_PER_LOCATION})</Label>
                 {showPhotoLimitError && (
                   <div className="flex items-center gap-1 text-red-600 text-sm">
                     <AlertCircle className="w-4 h-4" />
@@ -469,7 +459,7 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                 </div>
               )}
               <div className="grid grid-cols-3 gap-2">
-                {formData.photos.map((photo, index) => (
+                {(formData.photos || []).map((photo, index) => (
                   <div key={index} className="relative group aspect-square overflow-hidden rounded-md bg-gray-100">
                     <img
                       src={photo}
@@ -485,29 +475,24 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
                     </button>
                   </div>
                 ))}
-                {formData.photos.length < MAX_PHOTOS_PER_LOCATION && (
+                {(formData.photos || []).length < MAX_PHOTOS_PER_LOCATION && (
                   <div className="relative aspect-square w-full h-full border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors bg-gray-50">
-                    {/* Hidden file input */}
                     <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handlePhotoUpload}
-                      className="hidden"
                       id="photo-upload"
-                      disabled={isUploadingPhoto}
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      onClick={handleFileInputClick}
+                      className="hidden"
                     />
-                    {/* Visible upload button */}
                     <button
                       type="button"
                       onClick={handleUploadButtonClick}
-                      disabled={isUploadingPhoto}
-                      className="w-full h-full flex flex-col items-center justify-center text-center"
+                      className="flex flex-col items-center gap-2 text-gray-500 hover:text-gray-700"
                     >
-                      <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
-                      <p className="text-sm text-gray-500">
-                        {isUploadingPhoto ? 'Uploading...' : `Upload photos (max ${MAX_PHOTOS_PER_LOCATION}, ${MAX_FILE_SIZE_MB}MB each)`}
-                      </p>
+                      <Camera className="w-6 h-6" />
+                      <span className="text-sm">Add Photo</span>
                     </button>
                   </div>
                 )}
@@ -517,61 +502,61 @@ export const DestinationModal: React.FC<DestinationModalProps> = ({
             {/* Notes */}
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
-              <div className="h-32 overflow-y-auto border border-gray-300 rounded-md bg-white">
-                <Textarea
-                  id="notes"
-                  placeholder="Add your travel notes, memories, tips, and useful information here..."
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  rows={4}
-                  className="resize-none border-0 focus:ring-0 focus:border-0 h-full bg-transparent"
-                />
-              </div>
+              <Textarea
+                id="notes"
+                placeholder="Add any notes about this destination..."
+                value={formData.notes || ''}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                rows={3}
+              />
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-between pt-4 border-t mt-6">
-            <div>
-              {!isNewDestination && onDelete && (
-                <Button 
-                  variant="destructive" 
-                  size="icon"
-                  onClick={handleDelete}
-                  className="w-8 h-8"
-                  title="Delete Destination"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
+          {/* Footer */}
+          <div className="flex justify-between pt-4 border-t">
             <div className="flex gap-2">
               <Button variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit}>
-                {isNewDestination ? 'Add Destination' : 'Save Changes'}
-              </Button>
+              {!isNewDestination && onDelete && (
+                <Button variant="destructive" onClick={handleDelete}>
+                  Delete
+                </Button>
+              )}
             </div>
+            <Button onClick={handleSubmit} disabled={isUploadingPhoto}>
+              {isUploadingPhoto ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Uploading...
+                </div>
+              ) : (
+                isNewDestination ? 'Add Destination' : 'Save Changes'
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Full-size Photo Modal (root level, not nested) */}
-      {selectedPhotoIndex !== null && (
-        <Dialog open={selectedPhotoIndex !== null} onOpenChange={closePhotoModal}>
-          <DialogContent className="max-w-[98vw] max-h-[98vh] p-0 flex items-center justify-center bg-black bg-opacity-80">
-            <button
-              onClick={closePhotoModal}
-              className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-70"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <img
-              src={formData.photos[selectedPhotoIndex]}
-              alt={`Photo ${selectedPhotoIndex + 1}`}
-              className="object-contain max-w-full max-h-[95vh] mx-auto"
-            />
+      {/* Photo Modal */}
+      {isPhotoModalOpen && selectedPhotoIndex !== null && (
+        <Dialog open={isPhotoModalOpen} onOpenChange={setIsPhotoModalOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh]">
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={closePhotoModal}
+                className="absolute top-2 right-2 z-10 bg-black/50 text-white hover:bg-black/70"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+              <img
+                src={(formData.photos || [])[selectedPhotoIndex]}
+                alt={`Photo ${selectedPhotoIndex + 1}`}
+                className="w-full h-auto max-h-[70vh] object-contain"
+              />
+            </div>
           </DialogContent>
         </Dialog>
       )}

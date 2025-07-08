@@ -1,162 +1,155 @@
 import { supabase } from './supabase'
 
-
 export interface User {
   id: string
   email: string
   name: string
+  created_at: string
 }
 
-export interface AuthContextType {
-  user: User | null
-  login: (email: string, password: string) => Promise<boolean>
-  logout: () => void
-  isLoading: boolean
+export interface UserProfile {
+  id: string
+  user_id: string
+  name: string
+  email: string
+  created_at: string
+  updated_at: string
 }
 
-// Mock user for demo purposes (you can remove this later)
+// Demo user data for testing
 const DEMO_USER: User = {
-  id: '00000000-0000-0000-0000-000000000001', // Use a proper UUID
+  id: '00000000-0000-0000-0000-000000000001',
   email: 'demo@example.com',
-  name: 'Demo User'
-}
-
-// Function to ensure demo user exists in database
-const ensureDemoUserExists = async (): Promise<boolean> => {
-  try {
-    // First, try to get existing demo user
-    const { data: existingUser, error: fetchError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', DEMO_USER.id)
-      .single()
-
-    if (existingUser) {
-      return true // Demo user already exists
-    }
-
-    // Create demo user if it doesn't exist
-    const { error: insertError } = await supabase
-      .from('users')
-      .insert({
-        id: DEMO_USER.id,
-        email: DEMO_USER.email,
-        name: DEMO_USER.name
-      })
-
-    if (insertError) {
-      console.error('Error creating demo user:', insertError)
-      return false
-    }
-
-    return true
-  } catch (error) {
-    console.error('Error ensuring demo user exists:', error)
-    return false
-  }
+  name: 'Demo User',
+  created_at: new Date().toISOString()
 }
 
 export const loginUser = async (email: string, password: string): Promise<User | null> => {
   try {
-    // For demo purposes, allow login with demo credentials
-    if (email === 'demo@example.com' && password === 'demo123') {
-      // For demo user, just return the demo user without database interaction
-      console.log('Demo user login successful')
-      return DEMO_USER
-    }
-
-    // Real Supabase authentication
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     })
 
     if (error) {
-      console.error('Login error:', error)
+      console.error('Login error:', error.message)
       return null
     }
 
-    if (data.user) {
-      // Create or get user profile
-      const userProfile = await createOrGetUserProfile(data.user)
-      return userProfile
+    if (!data.user) {
+      console.error('No user data returned')
+      return null
     }
 
-    return null
+    // Special handling for demo user
+    if (data.user.email === 'demo@example.com') {
+      // Store demo user in localStorage for persistence
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('demo-user', JSON.stringify(DEMO_USER))
+      }
+      return DEMO_USER
+    }
+
+    // For real users, get their profile
+    const userProfile = await createOrGetUserProfile(data.user)
+    return userProfile
   } catch (error) {
     console.error('Login error:', error)
     return null
   }
 }
 
-export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | null> => {
+export const signUpUser = async (email: string, password: string, name: string): Promise<User | null> => {
   try {
-    console.log('createOrGetUserProfile: Starting for user:', supabaseUser.id)
-    
-    // Add timeout to prevent hanging
-    const timeoutPromise = new Promise<null>((_, reject) => {
-      setTimeout(() => reject(new Error('createOrGetUserProfile timeout')), 10000)
-    })
-    
-    const profilePromise = (async () => {
-      // First, try to get existing user profile
-      const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .single()
-
-      if (fetchError) {
-        console.log('createOrGetUserProfile: Fetch error:', fetchError)
-      }
-
-      if (existingUser) {
-        console.log('createOrGetUserProfile: Found existing user:', existingUser)
-        return {
-          id: existingUser.id,
-          email: existingUser.email,
-          name: existingUser.name
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: name
         }
       }
+    })
 
-      console.log('createOrGetUserProfile: Creating new user profile')
-      // If user doesn't exist, create a new profile
-      const { data: newUser, error: insertError } = await supabase
-        .from('users')
-        .insert({
-          id: supabaseUser.id,
-          email: supabaseUser.email || '',
-          name: supabaseUser.user_metadata?.name || supabaseUser.email || ''
-        })
-        .select()
-        .single()
+    if (error) {
+      console.error('Signup error:', error.message)
+      return null
+    }
 
-      if (insertError) {
-        console.error('createOrGetUserProfile: Error creating user profile:', insertError)
-        return null
-      }
+    if (!data.user) {
+      console.error('No user data returned from signup')
+      return null
+    }
 
-      console.log('createOrGetUserProfile: Created new user:', newUser)
-      return {
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name
-      }
-    })()
-
-    // Race between the profile creation and timeout
-    const result = await Promise.race([profilePromise, timeoutPromise])
-    console.log('createOrGetUserProfile: Completed successfully:', result)
-    return result
-    
+    // Create user profile
+    const userProfile = await createOrGetUserProfile(data.user)
+    return userProfile
   } catch (error) {
-    console.error('createOrGetUserProfile: Error in createOrGetUserProfile:', error)
+    console.error('Signup error:', error)
+    return null
+  }
+}
+
+export const createOrGetUserProfile = async (supabaseUser: any): Promise<User | null> => {
+  try {
+    // Check if user profile already exists
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', supabaseUser.id)
+      .single()
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error('Error fetching user profile:', fetchError)
+      return null
+    }
+
+    if (existingUser) {
+      return {
+        id: existingUser.user_id,
+        email: existingUser.email,
+        name: existingUser.name,
+        created_at: existingUser.created_at
+      }
+    }
+
+    // Create new user profile
+    const { data: newUser, error: insertError } = await supabase
+      .from('user_profiles')
+      .insert({
+        user_id: supabaseUser.id,
+        email: supabaseUser.email,
+        name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User'
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      console.error('Error creating user profile:', insertError)
+      return null
+    }
+
+    return {
+      id: newUser.user_id,
+      email: newUser.email,
+      name: newUser.name,
+      created_at: newUser.created_at
+    }
+  } catch (error) {
+    console.error('Error in createOrGetUserProfile:', error)
     return null
   }
 }
 
 export const logoutUser = async (): Promise<void> => {
   try {
+    // Clear demo user from localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('demo-user')
+      localStorage.removeItem('demo-destinations')
+    }
+
+    // Sign out from Supabase
     await supabase.auth.signOut()
   } catch (error) {
     console.error('Logout error:', error)
@@ -165,52 +158,28 @@ export const logoutUser = async (): Promise<void> => {
 
 export const getCurrentUser = async (): Promise<User | null> => {
   try {
-    const { data: { user }, error } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
     
-    if (error || !user) {
+    if (!user) {
+      // Check for demo user in localStorage
+      if (typeof window !== 'undefined') {
+        const storedUser = localStorage.getItem('demo-user')
+        if (storedUser) {
+          return JSON.parse(storedUser)
+        }
+      }
       return null
     }
 
-    return {
-      id: user.id,
-      email: user.email || '',
-      name: user.user_metadata?.name || user.email || ''
+    // Special handling for demo user
+    if (user.email === 'demo@example.com') {
+      return DEMO_USER
     }
+
+    // For real users, get their profile
+    return await createOrGetUserProfile(user)
   } catch (error) {
-    console.error('Get current user error:', error)
+    console.error('Error getting current user:', error)
     return null
-  }
-}
-
-// Local storage helpers for demo mode
-export const getStoredUser = (): User | null => {
-  if (typeof window === 'undefined') return null
-  
-  try {
-    const stored = localStorage.getItem('demo-user')
-    return stored ? JSON.parse(stored) : null
-  } catch (error) {
-    console.error('Error getting stored user:', error)
-    return null
-  }
-}
-
-export const storeUser = (user: User): void => {
-  if (typeof window === 'undefined') return
-  
-  try {
-    localStorage.setItem('demo-user', JSON.stringify(user))
-  } catch (error) {
-    console.error('Error storing user:', error)
-  }
-}
-
-export const clearStoredUser = (): void => {
-  if (typeof window === 'undefined') return
-  
-  try {
-    localStorage.removeItem('demo-user')
-  } catch (error) {
-    console.error('Error clearing stored user:', error)
   }
 } 
